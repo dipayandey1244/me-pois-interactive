@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4"/>
+      <stop offset="100%" stop-color="#34A853"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <!-- Map Pin / Node Graph icon for Research Work -->
+  <path d="M32 14C23.16 14 16 21.16 16 30c0 12 16 26 16 26s16-14 16-26c0-8.84-7.16-16-16-16zm0 22a6 6 0 1 1 0-12 6 6 0 0 1 0 12z" fill="url(#accent)"/>
+  <circle cx="32" cy="30" r="3" fill="#ffffff"/>
+  <!-- GNN Orbit Nodes -->
+  <circle cx="16" cy="18" r="2.5" fill="#38bdf8"/>
+  <circle cx="48" cy="18" r="2.5" fill="#4ade80"/>
+  <circle cx="48" cy="44" r="2.5" fill="#fbbf24"/>
+  <line x1="16" y1="18" x2="26" y2="24" stroke="rgba(56,189,248,0.5)" stroke-width="1.5"/>
+  <line x1="48" y1="18" x2="38" y2="24" stroke="rgba(74,222,128,0.5)" stroke-width="1.5"/>
+</svg>
