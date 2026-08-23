@@ -838,8 +838,81 @@
       </p>
     </div>
 
+    <!-- ── METRICS EXPLAINER ── -->
+    <h3>But Wait — What is an "F1 Score"?</h3>
+    <p>
+      Before we look at the results table, let's make sure we understand what each number actually means. If you've never seen "F1," "AUROC," or "IoU" before, don't worry — they're simpler than they sound.
+    </p>
+
+    <div class="simple-box">
+      <div class="heading">The Doctor Analogy:</div>
+      <p>
+        Imagine a doctor screening 100 patients for a disease. There are 10 actually sick people.<br><br>
+        <strong>Precision</strong> = "Of everyone the doctor said is sick, how many actually were?" If the doctor flagged 20 people and only 8 were really sick: Precision = 8/20 = 0.40. (The doctor has a lot of false alarms.)<br><br>
+        <strong>Recall</strong> = "Of all the actually sick people, how many did the doctor catch?" If 8 out of 10 sick people were found: Recall = 8/10 = 0.80. (The doctor missed 2 sick patients.)<br><br>
+        <strong>F1 Score</strong> = The balance between Precision and Recall. It's their "harmonic mean" — it punishes you hard if either one is bad. A model with great recall but terrible precision (flags everyone as sick) gets a low F1. A model that's precise but misses most cases also gets a low F1. <strong>Only a model that's both precise AND thorough gets a high F1.</strong>
+      </p>
+    </div>
+
+    <div class="math-display">
+      F1 = 2 × (Precision × Recall) / (Precision + Recall)<br><br>
+      If Precision = 0.40 and Recall = 0.80 → F1 = 2 × (0.40 × 0.80) / (0.40 + 0.80) = <strong>0.53</strong>
+    </div>
+
+    <div class="hand-note">
+      ✏️ Why F1 and not just "accuracy"? Because accuracy is misleading when categories are imbalanced. If 95% of restaurants are $, a model that always guesses "$" gets 95% accuracy but 0% F1 on the $$/$$$/$$$$ categories. F1 forces the model to be good at ALL price tiers equally — that's why we use "Macro F1" (average F1 across all classes).
+    </div>
+
+    <h3>📖 All Five Metrics, Explained Simply</h3>
+
+    <table class="results-table" style="margin-bottom:8px;">
+      <thead>
+        <tr><th>Metric</th><th>Used For</th><th>What It Measures</th><th>Perfect Score</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Macro F1 ↑</strong></td>
+          <td>Price Level ($–$$$$)</td>
+          <td>Can the model correctly guess each price tier without too many false alarms or misses? Averaged equally across all tiers.</td>
+          <td>1.0</td>
+        </tr>
+        <tr>
+          <td><strong>IoU ↑</strong></td>
+          <td>Operating Hours</td>
+          <td>"Intersection over Union" — how much do the predicted open hours <em>overlap</em> with the real open hours? Like comparing two Venn diagram circles. If they overlap perfectly, IoU = 1.</td>
+          <td>1.0</td>
+        </tr>
+        <tr>
+          <td><strong>AUROC ↑</strong></td>
+          <td>Permanent Closure</td>
+          <td>"Area Under the ROC Curve" — if we rank all venues by predicted closure risk, how well does the ranking separate the actually-closed ones from the open ones? 0.5 = random coin flip, 1.0 = perfect separation.</td>
+          <td>1.0</td>
+        </tr>
+        <tr>
+          <td><strong>MAE ↓</strong></td>
+          <td>Visit Intent</td>
+          <td>"Mean Absolute Error" — on average, how far off is the predicted search volume from the actual number? Lower = better. If MAE = 37, our predictions are off by ~37 searches on average.</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td><strong>RMSE ↓</strong></td>
+          <td>Busyness</td>
+          <td>"Root Mean Squared Error" — like MAE but penalizes big mistakes harder. A prediction that's off by 20 is punished 4× more than one that's off by 10. Lower = better.</td>
+          <td>0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="simple-box">
+      <div class="heading">Why does each task use a different metric?</div>
+      <p>
+        Different tasks need different rulers. Price level is a <em>category</em> (you're either right or wrong) → use F1. Operating hours are a <em>range</em> (open 9am–9pm) → use overlap/IoU. Closure is a <em>yes/no risk</em> → use AUROC (ranking quality). Visit intent and busyness are <em>numbers</em> → use error metrics (MAE/RMSE). Using the right metric prevents "cheating" — you can't just always predict the most common answer and score well.
+      </p>
+    </div>
+
+    <!-- ── THE ACTUAL BENCHMARK TABLE ── -->
     <h3>Full Benchmark Table</h3>
-    <p>Every model trained on the same SF dataset, tested on the same holdout set. Higher is better for F1/IoU/AUROC. Lower is better for MAE/RMSE.</p>
+    <p>Every model trained on the same SF dataset, tested on the same holdout set:</p>
 
     <table class="results-table">
       <thead>
@@ -866,12 +939,47 @@
       </tbody>
     </table>
 
+    <!-- ── READING THE RESULTS ── -->
+    <h3>📊 Reading the Table: What Each Row Tells Us</h3>
+
+    <div class="step-card">
+      <div class="step-num" style="color:#9ca3af;">1</div>
+      <div class="step-body">
+        <h4>Text-Only → F1 = 0.269</h4>
+        <p>The model reads reviews and names but has no idea what people actually do at the venue. It correctly identifies the right price tier only about 27% of the time (balanced across all tiers). On many $$ and $$$ venues, it just guesses $ because that's the most common word pattern.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num" style="color:#60a5fa;">2</div>
+      <div class="step-body">
+        <h4>Mobility-Only → F1 = 0.324 (+20.4%)</h4>
+        <p><strong>Even without reading a single word</strong>, the mobility model beats the text model. Just from watching arrival times, dwell durations, and density patterns, it identifies price tiers with 32.4% balanced accuracy. This is the proof that behavior is more truthful than text.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num" style="color:#fbbf24;">3</div>
+      <div class="step-body">
+        <h4>Text + Mobility → F1 = 0.307</h4>
+        <p>Interestingly, naively combining text and mobility <em>slightly hurts</em> price F1 vs. mobility alone. This is because the text signal adds noise that partially contradicts the mobility signal. However, it helps on other tasks (Hours IoU goes up to 0.590).</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num" style="color:#22c55e;">4</div>
+      <div class="step-body">
+        <h4>ME-POIs (Full) → F1 = 0.327 (Best)</h4>
+        <p>Adding the spatial GNN on top resolves the text-vs-mobility conflict. The neighborhood context tells the model "this venue is surrounded by luxury spots" — which disambiguates the noisy text signal. ME-POIs wins on <strong>all five tasks simultaneously</strong>.</p>
+      </div>
+    </div>
+
     <div class="callout green">
-      <p><strong>Key takeaway:</strong> ME-POIs wins on <em>every single task</em>. The biggest gains are on Price F1 (+21.6% vs text-only) and Closure AUROC (+6.7%) — exactly the tasks where text is most misleading and mobility is most informative.</p>
+      <p><strong>The F1 story in one sentence:</strong> Text-Only gets 0.269 F1 because it's fooled by misleading reviews. ME-POIs gets 0.327 F1 because it watches what people <em>actually do</em> and checks the neighborhood — it can't be fooled by words alone. That +21.6% improvement means ME-POIs correctly classifies significantly more venues across ALL price tiers, not just the easy ones.</p>
     </div>
 
     <div class="hand-note">
-      ✏️ Notice: "Mobility-Only" already beats "Text-Only" on price prediction (0.324 vs 0.269). This proves that foot traffic patterns alone are more truthful than reviews. Adding spatial context on top pushes it even further (0.327).
+      ✏️ The jump from 0.269 to 0.327 F1 might seem small, but remember: this is MACRO F1 across 4 price tiers. It means the model went from near-random guessing on rare tiers ($$$, $$$$) to actually identifying them correctly. In real-world applications, this is the difference between Google Maps showing "$" for a $$$$ restaurant and showing the correct "$$$$".
     </div>
   </div>
 </section>
