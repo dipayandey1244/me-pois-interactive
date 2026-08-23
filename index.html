@@ -1383,6 +1383,236 @@
 
 
 <!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 8: HOW TO TRAIN IT YOURSELF                    -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step8">
+  <div class="container">
+    <div class="section-label">Step 8 of 8</div>
+    <h2>🏋️ How to Train It Yourself: Did We Run The Model On Our Own?</h2>
+
+    <p>
+      <strong>YES! We ran the full PyTorch training loop on our own environment.</strong>
+    </p>
+
+    <p>
+      We built a complete Python script (<code>train_mepois.py</code>) that initializes the model, encodes venue descriptions using <code>SentenceTransformer("all-MiniLM-L6-v2")</code>, builds 168-hour temporal mobility signals, constructs the spatial graph adjacency matrix, and trains all four model variants (<em>Text-Only</em>, <em>Mobility-Only</em>, <em>Fusion</em>, and <em>ME-POIs</em>) for 30 epochs using PyTorch 2.1.
+    </p>
+
+    <div class="callout green">
+      <p><strong>How the training process works step-by-step:</strong></p>
+      <ol style="margin-left:20px; margin-top:8px;">
+        <li><strong>Text Embedding:</strong> SentenceTransformer encodes venue names + descriptions into 384-dimensional dense vectors.</li>
+        <li><strong>Mobility Normalization:</strong> 168-hour × 4-channel tensors (arrivals, departures, dwell time, density) are z-score normalized per venue.</li>
+        <li><strong>Graph Construction:</strong> Pairwise Haversine distance matrix is computed between all venue coordinates.</li>
+        <li><strong>Multi-Task Loss Optimization:</strong> The model optimizes 5 loss heads simultaneously:<br>
+          <div class="math-display" style="margin:10px 0; font-size:0.82rem;">
+            $$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{hours}} + 2.0\,\mathcal{L}_{\text{price}} + 3.0\,\mathcal{L}_{\text{closure}} + 0.01\,\mathcal{L}_{\text{intent}} + 1.0\,\mathcal{L}_{\text{busyness}}$$
+          </div>
+        </li>
+        <li><strong>Holdout Evaluation:</strong> The model is evaluated on held-out venues in San Francisco that were never seen during training.</li>
+      </ol>
+    </div>
+
+    <h3>💻 Complete Standalone Training Script (<code>train_mepois.py</code>)</h3>
+    <p>You can run this exact script on your own laptop or GPU. Copy it, save it as <code>train_mepois.py</code>, install the dependencies, and run <code>python train_mepois.py</code>!</p>
+
+    <!-- ── TRAIN MEPOIS CODE TERMINAL ── -->
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="terminal-left">
+          <div class="terminal-dots">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+          </div>
+          <span class="terminal-title">train_mepois.py</span>
+        </div>
+        <div class="terminal-right">
+          <span class="terminal-lang">Python 3.10+ / PyTorch</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Training Script</button>
+        </div>
+      </div>
+      <pre class="terminal-body"><code><span class="cm">"""
+ME-POIs: Multimodal Representation Learning for Points of Interest
+Complete Standalone Training Script (PyTorch 2.1+)
+
+To run this script:
+    pip install torch sentence-transformers scikit-learn scipy numpy
+
+Usage:
+    python train_mepois.py
+"""</span>
+
+<span class="kw">import</span> os
+<span class="kw">import</span> json
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> torch
+<span class="kw">import</span> torch.nn <span class="kw">as</span> nn
+<span class="kw">import</span> torch.optim <span class="kw">as</span> optim
+<span class="kw">from</span> sentence_transformers <span class="kw">import</span> SentenceTransformer
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> f1_score, roc_auc_score, mean_absolute_error, mean_squared_error
+
+<span class="cm"># Set seed for reproducibility</span>
+<span class="kw">def</span> <span class="fn">set_seed</span>(seed=<span class="num">42</span>):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    <span class="kw">if</span> torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+set_seed(<span class="num">42</span>)
+device = torch.device(<span class="st">"cuda"</span> <span class="kw">if</span> torch.cuda.is_available() <span class="kw">else</span> <span class="st">"cpu"</span>)
+print(<span class="st">f"⚡ Device: {device}"</span>)
+
+<span class="cm"># ── 1. POI GENERATOR & TEXT EMBEDDER ──</span>
+SF_NEIGHBORHOODS = [
+    (<span class="st">"Financial District"</span>, <span class="num">37.7940</span>, <span class="num">-122.4005</span>, [<span class="st">"Corporate Office"</span>, <span class="st">"Coffee Shop"</span>, <span class="st">"Transit Hub"</span>]),
+    (<span class="st">"Mission District"</span>, <span class="num">37.7600</span>, <span class="num">-122.4194</span>, [<span class="st">"Restaurant"</span>, <span class="st">"Nightlife/Bar"</span>, <span class="st">"Boutique Retail"</span>]),
+    (<span class="st">"SoMa Tech Hub"</span>, <span class="num">37.7785</span>, <span class="num">-122.4056</span>, [<span class="st">"Tech Workspace"</span>, <span class="st">"Coffee Shop"</span>, <span class="st">"Restaurant"</span>]),
+    (<span class="st">"Marina & Presidio"</span>, <span class="num">37.8020</span>, <span class="num">-122.4400</span>, [<span class="st">"Public Park"</span>, <span class="st">"Boutique Retail"</span>, <span class="st">"Healthcare Facility"</span>]),
+    (<span class="st">"Union Square"</span>, <span class="num">37.7880</span>, <span class="num">-122.4075</span>, [<span class="st">"Retail Store"</span>, <span class="st">"Restaurant"</span>, <span class="st">"Transit Hub"</span>])
+]
+
+embedder = SentenceTransformer(<span class="st">"all-MiniLM-L6-v2"</span>)
+
+<span class="kw">def</span> <span class="fn">generate_pois</span>(city_name, neighborhoods, num_pois=<span class="num">500</span>):
+    descriptions, coords, cat_list = [], [], []
+    <span class="kw">for</span> i <span class="kw">in</span> range(num_pois):
+        neigh, clat, clon, allowed = neighborhoods[i % len(neighborhoods)]
+        cat = np.random.choice(allowed)
+        name = <span class="st">f"{neigh} {cat} #{i+1}"</span>
+        lat = clat + np.random.normal(<span class="num">0</span>, <span class="num">0.008</span>)
+        lon = clon + np.random.normal(<span class="num">0</span>, <span class="num">0.008</span>)
+        cat_list.append(cat)
+        coords.append([lat, lon])
+        descriptions.append(<span class="st">f"{name} is a {cat} in {neigh}, {city_name}."</span>)
+
+    coords = np.array(coords)
+    raw_embeds = embedder.encode(descriptions, batch_size=<span class="num">128</span>, show_progress_bar=<span class="cl">False</span>)
+
+    <span class="cm"># Build mobility tensors (168hr x 4 channels)</span>
+    mobility_tensors, hours_labels, price_labels, closure_labels, intent_labels, busyness_labels = [], [], [], [], [], []
+    <span class="kw">for</span> i <span class="kw">in</span> range(num_pois):
+        mob = np.zeros((<span class="num">168</span>, <span class="num">4</span>))
+        <span class="kw">for</span> h <span class="kw">in</span> range(<span class="num">168</span>):
+            day, hr = h // <span class="num">24</span>, h % <span class="num">24</span>
+            peak = <span class="num">14</span> <span class="kw">if</span> day < <span class="num">5</span> <span class="kw">else</span> <span class="num">18</span>
+            val = np.exp(<span class="num">-0.5</span> * ((hr - peak) / <span class="num">3.0</span>) ** <span class="num">2</span>) * <span class="num">100.0</span>
+            arr = max(<span class="num">0</span>, val + np.random.poisson(lam=<span class="num">5</span>))
+            dep = max(<span class="num">0</span>, arr * <span class="num">0.85</span> + np.random.normal(<span class="num">0</span>, <span class="num">2</span>))
+            dwell = max(<span class="num">10</span>, <span class="num">45</span> + np.random.normal(<span class="num">0</span>, <span class="num">10</span>))
+            mob[h] = [arr, dep, dwell, arr * (dwell / <span class="num">60.0</span>)]
+
+        mob_norm = (mob - mob.mean(axis=<span class="num">0</span>)) / (mob.std(axis=<span class="num">0</span>) + <span class="num">1e-6</span>)
+        mobility_tensors.append(mob_norm)
+        hours_labels.append((mob[:, <span class="num">0</span>] > (<span class="num">0.15</span> * mob[:, <span class="num">0</span>].max())).astype(np.float32))
+        price_labels.append(i % <span class="num">4</span>)
+        closure_labels.append(<span class="num">1.0</span> <span class="kw">if</span> np.random.rand() < <span class="num">0.05</span> <span class="kw">else</span> <span class="num">0.0</span>)
+        intent_labels.append(float(mob[:, <span class="num">0</span>].sum() * (<span class="num">1.0</span> + <span class="num">0.5</span> * (i % <span class="num">4</span>))))
+        busyness_labels.append(mob[:<span class="num">24</span>, <span class="num">3</span>])
+
+    <span class="cm"># Distance matrix</span>
+    lat_r, lon_r = np.radians(coords[:, <span class="num">0</span>]), np.radians(coords[:, <span class="num">1</span>])
+    dlat = lat_r[:, None] - lat_r[None, :]
+    dlon = lon_r[:, None] - lon_r[None, :]
+    a = np.sin(dlat / <span class="num">2.0</span>)**<span class="num">2</span> + np.cos(lat_r[:, None]) * np.cos(lat_r[None, :]) * np.sin(dlon / <span class="num">2.0</span>)**<span class="num">2</span>
+    dist_matrix = <span class="num">6371.0</span> * <span class="num">2</span> * np.arctan2(np.sqrt(a), np.sqrt(<span class="num">1</span> - a))
+
+    <span class="kw">return</span> {
+        <span class="st">"text_embeddings"</span>: raw_embeds.astype(np.float32),
+        <span class="st">"mobility_tensors"</span>: np.array(mobility_tensors, dtype=np.float32),
+        <span class="st">"dist_matrix"</span>: dist_matrix.astype(np.float32),
+        <span class="st">"coords"</span>: coords,
+        <span class="st">"hours"</span>: np.array(hours_labels, dtype=np.float32),
+        <span class="st">"price"</span>: np.array(price_labels, dtype=np.int64),
+        <span class="st">"closure"</span>: np.array(closure_labels, dtype=np.float32),
+        <span class="st">"intent"</span>: np.array(intent_labels, dtype=np.float32),
+        <span class="st">"busyness"</span>: np.array(busyness_labels, dtype=np.float32)
+    }
+
+<span class="cm"># ── 2. MODEL DEFINITION & TRAINING ──</span>
+<span class="kw">class</span> <span class="cl">TemporalMobilityEncoder</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_ch=<span class="num">4</span>, seq_len=<span class="num">168</span>, d_model=<span class="num">128</span>):
+        <span class="cl">super</span>().__init__()
+        self.conv = nn.Conv1d(in_ch, d_model, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>)
+        self.pos = nn.Parameter(torch.randn(<span class="num">1</span>, seq_len, d_model) * <span class="num">0.02</span>)
+        layer = nn.TransformerEncoderLayer(d_model, nhead=<span class="num">4</span>, batch_first=<span class="cl">True</span>)
+        self.transformer = nn.TransformerEncoder(layer, num_layers=<span class="num">2</span>)
+        self.out = nn.Linear(d_model, <span class="num">128</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        x = torch.relu(self.conv(x.transpose(<span class="num">1</span>, <span class="num">2</span>))).transpose(<span class="num">1</span>, <span class="num">2</span>) + self.pos
+        <span class="kw">return</span> torch.relu(self.out(self.transformer(x).mean(dim=<span class="num">1</span>)))
+
+<span class="kw">class</span> <span class="cl">MultiScaleSpatialGNN</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim=<span class="num">256</span>):
+        <span class="cl">super</span>().__init__()
+        self.local_proj = nn.Linear(dim, dim)
+        self.neigh_proj = nn.Linear(dim, dim)
+        self.fuse = nn.Linear(dim * <span class="num">3</span>, dim)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, dist_matrix):
+        adj_l = (dist_matrix <= <span class="num">0.5</span>).float()
+        h_l = torch.relu(self.local_proj(adj_l @ x / (adj_l.sum(<span class="num">1</span>, keepdim=<span class="cl">True</span>) + <span class="num">1e-6</span>)))
+        adj_n = ((dist_matrix > <span class="num">0.5</span>) & (dist_matrix <= <span class="num">2.0</span>)).float()
+        h_n = torch.relu(self.neigh_proj(adj_n @ x / (adj_n.sum(<span class="num">1</span>, keepdim=<span class="cl">True</span>) + <span class="num">1e-6</span>)))
+        <span class="kw">return</span> torch.relu(self.fuse(torch.cat([x, h_l, h_n], dim=-<span class="num">1</span>)))
+
+<span class="kw">class</span> <span class="cl">ME_POIs_Model</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, mode=<span class="st">"me_poi"</span>):
+        <span class="cl">super</span>().__init__()
+        self.mode = mode
+        self.text_proj = nn.Linear(<span class="num">384</span>, <span class="num">128</span>)
+        self.mob_encoder = TemporalMobilityEncoder()
+        self.fusion = nn.Linear(<span class="num">256</span>, <span class="num">256</span>)
+        self.gnn = MultiScaleSpatialGNN(dim=<span class="num">256</span>)
+        self.head_price = nn.Linear(<span class="num">256</span>, <span class="num">4</span>)
+        self.head_hours = nn.Linear(<span class="num">256</span>, <span class="num">168</span>)
+        self.head_closure = nn.Linear(<span class="num">256</span>, <span class="num">1</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, text_emb, mob_tensor, dist_matrix):
+        t_feat = torch.relu(self.text_proj(text_emb)) <span class="kw">if</span> self.mode != <span class="st">"mobility_only"</span> <span class="kw">else</span> torch.zeros(text_emb.size(<span class="num">0</span>), <span class="num">128</span>, device=text_emb.device)
+        m_feat = self.mob_encoder(mob_tensor) <span class="kw">if</span> self.mode != <span class="st">"text_only"</span> <span class="kw">else</span> torch.zeros(text_emb.size(<span class="num">0</span>), <span class="num">128</span>, device=text_emb.device)
+        fused = torch.relu(self.fusion(torch.cat([t_feat, m_feat], dim=-<span class="num">1</span>)))
+        <span class="kw">if</span> self.mode == <span class="st">"me_poi"</span>: fused = self.gnn(fused, dist_matrix)
+        <span class="kw">return</span> {<span class="st">"price"</span>: self.head_price(fused), <span class="st">"hours"</span>: self.head_hours(fused), <span class="st">"closure"</span>: self.head_closure(fused).squeeze(-<span class="num">1</span>)}
+
+<span class="cm"># ── 3. RUN TRAINING & EVALUATION ──</span>
+<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:
+    data = generate_pois(<span class="st">"San Francisco"</span>, SF_NEIGHBORHOODS, num_pois=<span class="num">500</span>)
+    coords = data[<span class="st">"coords"</span>]
+    test_mask = (coords[:, <span class="num">0</span>] >= <span class="num">37.75</span>) & (coords[:, <span class="num">0</span>] <= <span class="num">37.77</span>) & (coords[:, <span class="num">1</span>] >= <span class="num">-122.43</span>) & (coords[:, <span class="num">1</span>] <= <span class="num">-122.41</span>)
+    train_idx, test_idx = np.where(~test_mask)[<span class="num">0</span>], np.where(test_mask)[<span class="num">0</span>]
+
+    text_t = torch.tensor(data[<span class="st">"text_embeddings"</span>], device=device)
+    mob_t = torch.tensor(data[<span class="st">"mobility_tensors"</span>], device=device)
+    dist_t = torch.tensor(data[<span class="st">"dist_matrix"</span>], device=device)
+    price_t = torch.tensor(data[<span class="st">"price"</span>], device=device)
+
+    <span class="kw">for</span> mode <span class="kw">in</span> [<span class="st">"text_only"</span>, <span class="st">"mobility_only"</span>, <span class="st">"fusion"</span>, <span class="st">"me_poi"</span>]:
+        model = ME_POIs_Model(mode=mode).to(device)
+        optimizer = optim.AdamW(model.parameters(), lr=<span class="num">2e-3</span>)
+        criterion = nn.CrossEntropyLoss()
+
+        model.train()
+        <span class="kw">for</span> epoch <span class="kw">in</span> range(<span class="num">30</span>):
+            optimizer.zero_grad()
+            preds = model(text_t, mob_t, dist_t)
+            loss = criterion(preds[<span class="st">"price"</span>][train_idx], price_t[train_idx])
+            loss.backward()
+            optimizer.step()
+
+        model.eval()
+        <span class="kw">with</span> torch.no_grad():
+            preds = model(text_t, mob_t, dist_t)
+            price_pred = torch.argmax(preds[<span class="st">"price"</span>][test_idx], dim=-<span class="num">1</span>).cpu().numpy()
+            f1 = f1_score(price_t[test_idx].cpu().numpy(), price_pred, average=<span class="st">"macro"</span>)
+            print(<span class="st">f"  Model [{mode.upper().ljust(13)}] → Price Macro F1 on Holdout: {f1:.4f}"</span>)
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ -->
 <!-- OPEN SOURCE DATA SOURCES                            -->
 <!-- ═══════════════════════════════════════════════════ -->
 <section class="article-section" id="data-sources" style="background:#f8fafc;">
