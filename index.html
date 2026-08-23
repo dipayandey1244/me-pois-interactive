@@ -751,52 +751,185 @@
     <p>Here's the actual code. Each module matches one "brain" from Step 3.</p>
 
     <h3>🧠 Brain 2 — TemporalMobilityEncoder</h3>
-    <p>Takes the 168-hour × 4-channel mobility signal and compresses it into 128 numbers.</p>
-    <div class="code-block"><span class="kw">class</span> <span class="cl">TemporalMobilityEncoder</span>(nn.Module):
+    <p>This module reads the 168-hour weekly mobility signal (4 channels: arrivals, departures, dwell time, density) and compresses it into a single 128-number "fingerprint" that captures the venue's temporal behavior.</p>
+
+    <div class="code-block"><span class="cm">## ───────────────────────────────────────────────────────────────</span>
+<span class="cm">##  TemporalMobilityEncoder</span>
+<span class="cm">##  Input:  168 hours × 4 channels  (one week of foot traffic)</span>
+<span class="cm">##  Output: 128 numbers             (the venue's "mobility fingerprint")</span>
+<span class="cm">## ───────────────────────────────────────────────────────────────</span>
+
+<span class="kw">class</span> <span class="cl">TemporalMobilityEncoder</span>(nn.Module):
+
     <span class="kw">def</span> <span class="fn">__init__</span>(self, in_ch=<span class="st">4</span>, seq_len=<span class="st">168</span>, d_model=<span class="st">128</span>):
+        <span class="cm"># in_ch=4    → 4 input channels: arrivals, departures, dwell, density</span>
+        <span class="cm"># seq_len=168 → 24 hours × 7 days = 168 time steps per week</span>
+        <span class="cm"># d_model=128 → internal representation size (how many numbers per time step)</span>
         <span class="cl">super</span>().__init__()
-        <span class="cm"># Step 1: 1D convolution to find local patterns in the hourly data</span>
-        self.conv = nn.Conv1d(in_ch, d_model, kernel_size=<span class="st">3</span>, padding=<span class="st">1</span>)
-        <span class="cm"># Step 2: Positional embedding so the model knows "which hour is this"</span>
-        self.pos = nn.Parameter(torch.randn(<span class="st">1</span>, seq_len, d_model) * <span class="st">0.02</span>)
-        <span class="cm"># Step 3: 2-layer Transformer to relate patterns across the full week</span>
-        layer = nn.TransformerEncoderLayer(d_model, nhead=<span class="st">4</span>, batch_first=<span class="cl">True</span>)
-        self.transformer = nn.TransformerEncoder(layer, num_layers=<span class="st">2</span>)
+
+        <span class="cm"># ┌─ STEP 1: 1D Convolution ─────────────────────────────────┐</span>
+        <span class="cm"># │ Slides a window of size 3 across the 168 hours.          │</span>
+        <span class="cm"># │ This finds LOCAL patterns: "arrivals spike then drop"     │</span>
+        <span class="cm"># │ Converts 4 raw channels → 128 learned features per hour. │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
+        self.conv = nn.Conv1d(
+            in_channels=in_ch,       <span class="cm"># 4 raw signals go in</span>
+            out_channels=d_model,    <span class="cm"># 128 learned features come out</span>
+            kernel_size=<span class="st">3</span>,           <span class="cm"># look at 3 consecutive hours at a time</span>
+            padding=<span class="st">1</span>               <span class="cm"># keep the output length = 168 (same as input)</span>
+        )
+
+        <span class="cm"># ┌─ STEP 2: Positional Embedding ───────────────────────────┐</span>
+        <span class="cm"># │ The Transformer doesn't know "which hour is this" unless  │</span>
+        <span class="cm"># │ we tell it. We add a learned vector to each of the 168    │</span>
+        <span class="cm"># │ positions so the model can distinguish Monday 8am from    │</span>
+        <span class="cm"># │ Friday 8am. Initialized with small random noise.          │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
+        self.pos = nn.Parameter(
+            torch.randn(<span class="st">1</span>, seq_len, d_model) * <span class="st">0.02</span>
+            <span class="cm"># Shape: (1, 168, 128) — one positional vector per hour</span>
+            <span class="cm"># Multiplied by 0.02 so initial values are small and don't dominate</span>
+        )
+
+        <span class="cm"># ┌─ STEP 3: Transformer Encoder ────────────────────────────┐</span>
+        <span class="cm"># │ 2-layer Transformer that looks at ALL 168 hours at once.  │</span>
+        <span class="cm"># │ Self-attention lets it relate distant time steps:          │</span>
+        <span class="cm"># │   "Monday noon looks like Tuesday noon → weekday pattern" │</span>
+        <span class="cm"># │ nhead=4 means 4 parallel attention heads (each learns a   │</span>
+        <span class="cm"># │ different kind of temporal relationship).                  │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
+        layer = nn.TransformerEncoderLayer(
+            d_model=d_model,         <span class="cm"># each time step = 128 numbers</span>
+            nhead=<span class="st">4</span>,                 <span class="cm"># 4 attention heads (128/4 = 32 dims each)</span>
+            batch_first=<span class="cl">True</span>        <span class="cm"># input shape: (batch, 168, 128)</span>
+        )
+        self.transformer = nn.TransformerEncoder(
+            layer,
+            num_layers=<span class="st">2</span>            <span class="cm"># stack 2 layers for deeper pattern recognition</span>
+        )
+
+        <span class="cm"># ┌─ STEP 4: Output Projection ──────────────────────────────┐</span>
+        <span class="cm"># │ Final linear layer to project from d_model → 128 dims.   │</span>
+        <span class="cm"># │ (In this case d_model is already 128, so this acts as a   │</span>
+        <span class="cm"># │ learned mixing layer to refine the final representation.) │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
         self.out = nn.Linear(d_model, <span class="st">128</span>)
 
-    <span class="kw">def</span> <span class="fn">forward</span>(self, x):  <span class="cm"># x shape: (batch, 4, 168)</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="cm"># x shape: (batch_size, 4, 168)</span>
+        <span class="cm"># Example: 32 venues, each with 4 signals over 168 hours</span>
+
+        <span class="cm"># Step A: Apply convolution</span>
+        <span class="cm">#   (batch, 4, 168) → Conv1d → (batch, 128, 168)</span>
+        <span class="cm">#   Then transpose so time is the sequence dimension:</span>
+        <span class="cm">#   (batch, 128, 168) → transpose → (batch, 168, 128)</span>
+        <span class="cm">#   Then add positional embeddings so the model knows the hour</span>
         x = torch.relu(self.conv(x)).transpose(<span class="st">1</span>, <span class="st">2</span>) + self.pos
+
+        <span class="cm"># Step B: Transformer processes all 168 hours with self-attention</span>
+        <span class="cm">#   (batch, 168, 128) → Transformer → (batch, 168, 128)</span>
+        <span class="cm">#</span>
+        <span class="cm"># Step C: .mean(dim=1) averages across all 168 hours</span>
+        <span class="cm">#   (batch, 168, 128) → mean → (batch, 128)</span>
+        <span class="cm">#   This collapses the whole week into ONE 128-d vector</span>
+        <span class="cm">#</span>
+        <span class="cm"># Step D: Project through output layer + ReLU activation</span>
+        <span class="cm">#   (batch, 128) → Linear → (batch, 128) → ReLU → final output</span>
         <span class="kw">return</span> torch.relu(self.out(self.transformer(x).mean(dim=<span class="st">1</span>)))</div>
 
+    <div class="simple-box">
+      <div class="heading">What just happened?</div>
+      <p>
+        We took a venue's raw foot traffic data (168 hours × 4 signals = 672 numbers) and compressed it down to just 128 numbers that capture the essence of "what kind of place is this?" The convolution finds local patterns (e.g., "spike followed by dip"), the Transformer relates patterns across the whole week (e.g., "weekday pattern repeats 5 times"), and the final average creates one compact fingerprint.
+      </p>
+    </div>
+
     <div class="hand-note">
-      ✏️ The key line: <code>.mean(dim=1)</code> — after the Transformer processes all 168 hours, we average them into a single 128-number summary. This is the venue's "mobility fingerprint."
+      ✏️ The critical line is <code>.mean(dim=1)</code> — this takes 168 processed time steps and averages them into a single vector. It's like reading an entire book and then writing a one-sentence summary. That one sentence (128 numbers) is the venue's mobility identity.
     </div>
 
     <h3>🧠 Brain 3 — MultiScaleSpatialGNN</h3>
-    <p>Builds distance-based neighborhoods and aggregates neighbor information at three scales.</p>
-    <div class="code-block"><span class="kw">class</span> <span class="cl">MultiScaleSpatialGNN</span>(nn.Module):
+    <p>This module builds a geographic graph of nearby venues and aggregates information from neighbors at two distance scales (local + neighborhood), producing a spatially-aware representation.</p>
+
+    <div class="code-block"><span class="cm">## ───────────────────────────────────────────────────────────────</span>
+<span class="cm">##  MultiScaleSpatialGNN (Graph Neural Network)</span>
+<span class="cm">##  Input:  feature vectors for all venues + pairwise distance matrix</span>
+<span class="cm">##  Output: spatially-enriched feature vectors</span>
+<span class="cm">## ───────────────────────────────────────────────────────────────</span>
+
+<span class="kw">class</span> <span class="cl">MultiScaleSpatialGNN</span>(nn.Module):
+
     <span class="kw">def</span> <span class="fn">__init__</span>(self, dim=<span class="st">256</span>):
+        <span class="cm"># dim = size of each venue's feature vector (256 numbers)</span>
         <span class="cl">super</span>().__init__()
-        self.local_proj = nn.Linear(dim, dim)  <span class="cm"># For d ≤ 0.5km</span>
-        self.neigh_proj = nn.Linear(dim, dim)  <span class="cm"># For 0.5km < d ≤ 2km</span>
-        self.fuse = nn.Linear(dim * <span class="st">3</span>, dim)    <span class="cm"># Combine self + local + neighborhood</span>
+
+        <span class="cm"># ┌─ Scale 1: LOCAL projection (d ≤ 0.5km) ──────────────────┐</span>
+        <span class="cm"># │ A linear layer that transforms aggregated LOCAL neighbor  │</span>
+        <span class="cm"># │ features. "LOCAL" = venues on the same block / street.    │</span>
+        <span class="cm"># │ Example: the bakery next door, the ATM across the street. │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
+        self.local_proj = nn.Linear(dim, dim)
+
+        <span class="cm"># ┌─ Scale 2: NEIGHBORHOOD projection (0.5km < d ≤ 2km) ────┐</span>
+        <span class="cm"># │ Same idea, but for venues in the wider neighborhood.      │</span>
+        <span class="cm"># │ "NEIGHBORHOOD" = the character of the district.           │</span>
+        <span class="cm"># │ Example: SoMa is tech-heavy, Marina is upscale retail.    │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
+        self.neigh_proj = nn.Linear(dim, dim)
+
+        <span class="cm"># ┌─ Fusion layer ────────────────────────────────────────────┐</span>
+        <span class="cm"># │ Combines THREE vectors into one:                          │</span>
+        <span class="cm"># │   1. The venue's OWN features (dim)                       │</span>
+        <span class="cm"># │   2. Aggregated LOCAL neighbor features (dim)             │</span>
+        <span class="cm"># │   3. Aggregated NEIGHBORHOOD features (dim)              │</span>
+        <span class="cm"># │ Total input: dim × 3 = 768 → output: dim = 256           │</span>
+        <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
+        self.fuse = nn.Linear(dim * <span class="st">3</span>, dim)
+
 
     <span class="kw">def</span> <span class="fn">forward</span>(self, x, dist_matrix):
-        <span class="cm"># Which venues are within 0.5km of each other?</span>
+        <span class="cm"># x: (N, 256)           — feature vectors for N venues</span>
+        <span class="cm"># dist_matrix: (N, N)   — pairwise distances in km between all venues</span>
+
+        <span class="cm"># ── Scale 1: LOCAL neighbors (within 0.5 km) ──────────────</span>
+        <span class="cm"># Create adjacency matrix: 1 if distance ≤ 0.5km, else 0</span>
         adj_local = (dist_matrix <= <span class="st">0.5</span>).float()
+        <span class="cm">#   Example: if venues A and B are 0.3km apart → adj[A][B] = 1</span>
+        <span class="cm">#            if venues A and C are 1.2km apart → adj[A][C] = 0</span>
+
+        <span class="cm"># Count how many local neighbors each venue has (for averaging)</span>
         deg = adj_local.sum(<span class="st">1</span>, keepdim=<span class="cl">True</span>) + <span class="st">1e-6</span>
+        <span class="cm">#   +1e-6 prevents division by zero if a venue has no neighbors</span>
+
+        <span class="cm"># THE KEY OPERATION: aggregate neighbor features</span>
+        <span class="cm">#   adj_local @ x  = for each venue, SUM the features of all neighbors</span>
+        <span class="cm">#   / deg           = divide by count → AVERAGE of neighbor features</span>
+        <span class="cm">#   local_proj(...)  = learned linear transformation</span>
+        <span class="cm">#   relu(...)        = keep only positive activations</span>
         h_local = torch.relu(self.local_proj(adj_local @ x / deg))
 
-        <span class="cm"># Which venues are 0.5-2km away?</span>
+        <span class="cm"># ── Scale 2: NEIGHBORHOOD (0.5km to 2.0km) ────────────────</span>
+        <span class="cm"># Same process, but for the "medium distance" ring</span>
         adj_neigh = ((dist_matrix > <span class="st">0.5</span>) & (dist_matrix <= <span class="st">2.0</span>)).float()
         deg2 = adj_neigh.sum(<span class="st">1</span>, keepdim=<span class="cl">True</span>) + <span class="st">1e-6</span>
         h_neigh = torch.relu(self.neigh_proj(adj_neigh @ x / deg2))
 
-        <span class="cm"># Combine: self features + local context + neighborhood context</span>
+        <span class="cm"># ── FUSION: combine self + local + neighborhood ───────────</span>
+        <span class="cm"># torch.cat stacks three 256-d vectors → one 768-d vector</span>
+        <span class="cm"># self.fuse projects 768 → 256 (learned mixing)</span>
+        <span class="cm"># Result: each venue now "knows" about itself AND its surroundings</span>
         <span class="kw">return</span> torch.relu(self.fuse(torch.cat([x, h_local, h_neigh], dim=-<span class="st">1</span>)))</div>
 
+    <div class="simple-box">
+      <div class="heading">What just happened?</div>
+      <p>
+        For every venue, we looked at its nearby venues (within 0.5km and 0.5–2km) and asked: "what are my neighbors like?" We averaged each neighbor's features, ran them through a learned transformation, and combined them with the venue's own features. Now the venue's representation includes not just what IT is, but what its SURROUNDINGS look like. A coffee shop surrounded by tech offices gets a different vector than one surrounded by art galleries.
+      </p>
+    </div>
+
     <div class="hand-note">
-      ✏️ The magic line: <code>adj_local @ x / deg</code> — this is matrix multiplication that literally averages the features of all neighbors within 0.5km. It's asking: "what are your closest neighbors like?"
+      ✏️ The magic line: <code>adj_local @ x / deg</code> — this matrix multiply is the entire GNN in one line. It computes the average feature vector of all neighbors. It's the mathematical equivalent of "look at every shop within walking distance and describe what they're like on average."
     </div>
   </div>
 </section>
