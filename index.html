@@ -1181,6 +1181,148 @@
         <thead><tr><th>#</th><th>Venue</th><th>Category</th><th>Area</th><th>Split</th><th>Price</th><th></th></tr></thead>
         <tbody id="poi-tbody"></tbody>
       </table>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 7: DYNAMIC CITY EXPLORER                      -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step7" style="background:#fff;">
+  <div class="wide">
+    <div class="section-label">Bonus — Try Any City</div>
+    <h2 style="font-family:'Inter',sans-serif; font-size:1.65rem; font-weight:700; color:#0f172a; margin-bottom:8px;">🌍 Dynamic City Explorer: Run ME-POIs on ANY City</h2>
+    <p style="color:#64748b; margin-bottom:20px;">
+      Pick a city below (or type your own). We'll fetch <strong>real POI data</strong> from <strong>OpenStreetMap</strong> via the Overpass API, then simulate ME-POIs classification on those real venues. This demonstrates how the model would process real-world geographic data.
+    </p>
+
+    <div class="callout">
+      <p><strong>How it works:</strong> When you click "Run Classification", we query the <a href="https://overpass-api.de/" target="_blank" style="color:#4285F4;">Overpass API</a> (OpenStreetMap's public query endpoint) to fetch restaurants, cafés, bars, offices, and shops in your chosen city. We then simulate ME-POIs predictions (price level, closure risk, busyness) on each real venue using the model patterns learned from Section 5.</p>
+    </div>
+
+    <!-- City Input -->
+    <div style="display:flex; gap:12px; margin:24px 0; flex-wrap:wrap; align-items:center;">
+      <select id="city-preset" style="font-family:'Inter',sans-serif; font-size:0.9rem; padding:10px 14px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; min-width:200px;">
+        <option value="37.7749,-122.4194,San Francisco">San Francisco, USA</option>
+        <option value="40.7128,-74.006,New York">New York, USA</option>
+        <option value="51.5074,-0.1278,London">London, UK</option>
+        <option value="48.8566,2.3522,Paris">Paris, France</option>
+        <option value="35.6762,139.6503,Tokyo">Tokyo, Japan</option>
+        <option value="28.6139,77.209,New Delhi">New Delhi, India</option>
+        <option value="19.076,72.8777,Mumbai">Mumbai, India</option>
+        <option value="12.9716,77.5946,Bangalore">Bangalore, India</option>
+        <option value="-33.8688,151.2093,Sydney">Sydney, Australia</option>
+        <option value="1.3521,103.8198,Singapore">Singapore</option>
+        <option value="52.52,13.405,Berlin">Berlin, Germany</option>
+        <option value="55.7558,37.6173,Moscow">Moscow, Russia</option>
+        <option value="-23.5505,-46.6333,São Paulo">São Paulo, Brazil</option>
+        <option value="custom">🔍 Custom city (type below)</option>
+      </select>
+      <input type="text" id="city-custom-input" placeholder="Type city name (e.g., Dubai)…" style="font-family:'Inter',sans-serif; font-size:0.9rem; padding:10px 14px; border:1px solid #e5e7eb; border-radius:8px; flex:1; min-width:200px; display:none;">
+      <button id="btn-run-city" style="font-family:'Inter',sans-serif; font-size:0.9rem; font-weight:700; padding:10px 24px; background:linear-gradient(135deg,#4285F4,#1d4ed8); color:#fff; border:none; border-radius:8px; cursor:pointer; transition:all 0.2s; white-space:nowrap;">
+        🚀 Run Classification
+      </button>
+    </div>
+
+    <!-- Status -->
+    <div id="city-status" style="font-family:'Inter',sans-serif; font-size:0.88rem; color:#64748b; margin-bottom:16px; min-height:24px;"></div>
+
+    <!-- City Map -->
+    <div id="city-map" style="height:450px; width:100%; border-radius:10px; border:1px solid #e5e7eb; margin-bottom:16px; display:none;"></div>
+
+    <!-- Results Grid -->
+    <div id="city-results" style="display:none;">
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4>🏷️ Category Distribution</h4>
+          <div id="chart-city-cats" style="width:100%;height:300px;"></div>
+        </div>
+        <div class="chart-card">
+          <h4>💰 Predicted Price Levels</h4>
+          <div id="chart-city-prices" style="width:100%;height:300px;"></div>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4>⚠️ Closure Risk Distribution</h4>
+          <div id="chart-city-closure" style="width:100%;height:300px;"></div>
+        </div>
+        <div class="chart-card">
+          <h4>📊 Text-Only vs ME-POIs F1 (Simulated)</h4>
+          <div id="chart-city-f1" style="width:100%;height:300px;"></div>
+        </div>
+      </div>
+
+      <!-- Per-venue table -->
+      <h3 style="font-family:'Inter',sans-serif; margin-top:28px;">📋 Classification Results for <span id="city-results-name" style="color:#4285F4;">City</span></h3>
+      <p style="font-size:0.88rem; color:#94a3b8; margin-bottom:12px;">Showing top venues. Click any row to highlight on the map.</p>
+      <div style="overflow-x:auto;">
+        <table class="poi-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Venue Name</th>
+              <th>OSM Category</th>
+              <th>Predicted Price</th>
+              <th>Closure Risk</th>
+              <th>Peak Hour</th>
+            </tr>
+          </thead>
+          <tbody id="city-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- OPEN SOURCE DATA SOURCES                            -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="data-sources" style="background:#f8fafc;">
+  <div class="container">
+    <div class="section-label">Data Transparency</div>
+    <h2>📂 Are These Datasets Open Source?</h2>
+
+    <p>Great question. Here's a clear breakdown of what's open and what's not:</p>
+
+    <div class="step-card" style="border-color:#bbf7d0; background:#f0fdf4;">
+      <div class="step-num" style="color:#22c55e;">✅</div>
+      <div class="step-body">
+        <h4>OpenStreetMap POI Data — Fully Open Source</h4>
+        <p>All venue data in the Dynamic City Explorer (Section 7) comes from <a href="https://www.openstreetmap.org/" target="_blank" style="color:#4285F4;">OpenStreetMap</a>, licensed under the <strong>Open Database License (ODbL)</strong>. This means: ✅ Free to use, ✅ Free to share, ✅ Free to modify, ✅ Must attribute "© OpenStreetMap contributors". The <a href="https://overpass-api.de/" target="_blank" style="color:#4285F4;">Overpass API</a> is the public query endpoint — completely free, no API key needed.</p>
+      </div>
+    </div>
+
+    <div class="step-card" style="border-color:#bbf7d0; background:#f0fdf4;">
+      <div class="step-num" style="color:#22c55e;">✅</div>
+      <div class="step-body">
+        <h4>Nominatim Geocoding — Fully Open Source</h4>
+        <p>City search uses <a href="https://nominatim.openstreetmap.org/" target="_blank" style="color:#4285F4;">Nominatim</a>, OSM's geocoding service. Same ODbL license. Free for reasonable use (≤1 request/second).</p>
+      </div>
+    </div>
+
+    <div class="step-card" style="border-color:#bbf7d0; background:#f0fdf4;">
+      <div class="step-num" style="color:#22c55e;">✅</div>
+      <div class="step-body">
+        <h4>Map Tiles — Open Source</h4>
+        <p>Map rendering uses <a href="https://carto.com/basemaps/" target="_blank" style="color:#4285F4;">CARTO's Light basemap</a>, built on OpenStreetMap data. Free for open projects.</p>
+      </div>
+    </div>
+
+    <div class="step-card" style="border-color:#fecaca; background:#fef2f2;">
+      <div class="step-num" style="color:#ef4444;">⚠️</div>
+      <div class="step-body">
+        <h4>Original ME-POIs Training Data — NOT Open Source</h4>
+        <p>The original Google Research paper uses <strong>Google's internal mobility data</strong> (aggregate anonymized visit patterns). This data is proprietary and not publicly available. Our mobility patterns in Sections 1–6 are <strong>simulated to match the statistical distributions described in the paper</strong> — they're not real Google data. In Section 7, we use OSM data and <strong>simulate</strong> what ME-POIs would predict, based on the paper's reported performance metrics.</p>
+      </div>
+    </div>
+
+    <div class="simple-box">
+      <div class="heading">What this means for you:</div>
+      <p>
+        Everything you see in this demo can be freely reproduced. The POI locations, names, and categories from the city explorer are real data from OpenStreetMap (open source). The classification results are simulated based on the paper's reported metrics and architectural design. To run the actual ME-POIs model with real mobility data, you would need access to Google's internal datasets or a comparable open mobility dataset like <a href="https://www.safegraph.com/" target="_blank" style="color:#4285F4;">SafeGraph</a> (academic access available) or <a href="https://github.com/JiaweiZhang-THU/Awesome-Mobility-Data" target="_blank" style="color:#4285F4;">open mobility datasets</a>.
+      </p>
     </div>
   </div>
 </section>
@@ -1188,6 +1330,7 @@
 
 <footer class="site-footer">
   <p>Research Replication · Built with PyTorch, SentenceTransformers, Leaflet.js & Plotly · Dipayan · 2026</p>
+  <p style="margin-top:8px;">POI data © <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color:#64748b;">OpenStreetMap</a> contributors (ODbL)</p>
 </footer>
 
 
@@ -1436,6 +1579,266 @@
       legend: { orientation: 'h', y: 1.1 }
     }, { responsive: true });
   });
+
+
+  /* ═══════════════════════════════════════════════════════════════ */
+  /* STEP 7: DYNAMIC CITY EXPLORER                                  */
+  /* ═══════════════════════════════════════════════════════════════ */
+
+  let cityMap = null, cityMarkers = [];
+
+  const PRICE_COLORS = { '$': '#22c55e', '$$': '#3b82f6', '$$$': '#f59e0b', '$$$$': '#ef4444' };
+  const RISK_LABELS = ['Very Low', 'Low', 'Medium', 'High', 'Very High'];
+  const RISK_COLORS = ['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444'];
+
+  // Map OSM amenity tags to human-readable categories
+  function osmCategory(tags) {
+    if (!tags) return 'Other';
+    const a = tags.amenity || tags.shop || tags.tourism || tags.leisure || '';
+    const map = {
+      restaurant: 'Restaurant', cafe: 'Café', fast_food: 'Fast Food',
+      bar: 'Bar', pub: 'Pub', nightclub: 'Nightclub',
+      pharmacy: 'Pharmacy', bank: 'Bank', hospital: 'Hospital',
+      supermarket: 'Supermarket', bakery: 'Bakery', convenience: 'Convenience Store',
+      clothes: 'Clothing Store', hotel: 'Hotel', museum: 'Museum',
+      library: 'Library', cinema: 'Cinema', gym: 'Gym',
+      park: 'Park', mall: 'Mall', office: 'Office'
+    };
+    return map[a] || (a.charAt(0).toUpperCase() + a.slice(1)).replace(/_/g, ' ') || 'Other';
+  }
+
+  // Simulate ME-POIs price prediction based on category heuristics
+  function predictPrice(cat) {
+    const probs = {
+      'Restaurant': [0.25, 0.35, 0.25, 0.15],
+      'Café': [0.45, 0.35, 0.15, 0.05],
+      'Fast Food': [0.70, 0.25, 0.05, 0],
+      'Bar': [0.15, 0.35, 0.35, 0.15],
+      'Pub': [0.30, 0.40, 0.25, 0.05],
+      'Nightclub': [0.05, 0.20, 0.40, 0.35],
+      'Hotel': [0.05, 0.20, 0.35, 0.40],
+      'Bakery': [0.55, 0.35, 0.10, 0],
+      'Supermarket': [0.40, 0.40, 0.15, 0.05],
+    };
+    const p = probs[cat] || [0.35, 0.35, 0.20, 0.10];
+    const r = Math.random();
+    let cum = 0;
+    for (let i = 0; i < 4; i++) { cum += p[i]; if (r < cum) return i; }
+    return 0;
+  }
+
+  // Simulate closure risk
+  function predictClosure(cat, hasName) {
+    let base = hasName ? 0.08 : 0.35;
+    if (cat === 'Fast Food') base *= 1.5;
+    if (cat === 'Restaurant') base *= 1.2;
+    if (cat === 'Bank' || cat === 'Hospital') base *= 0.3;
+    return Math.min(1, base + (Math.random() - 0.5) * 0.15);
+  }
+
+  // Simulate peak hour
+  function predictPeak(cat) {
+    const peaks = {
+      'Restaurant': 12 + Math.floor(Math.random() * 2),
+      'Café': 8 + Math.floor(Math.random() * 2),
+      'Fast Food': 12 + Math.floor(Math.random() * 3),
+      'Bar': 21 + Math.floor(Math.random() * 2),
+      'Pub': 20 + Math.floor(Math.random() * 2),
+      'Nightclub': 23,
+      'Bakery': 8 + Math.floor(Math.random() * 2),
+      'Supermarket': 17 + Math.floor(Math.random() * 2),
+      'Hotel': 15 + Math.floor(Math.random() * 4),
+    };
+    return peaks[cat] || (10 + Math.floor(Math.random() * 6));
+  }
+
+  // Show / hide custom input
+  document.getElementById('city-preset').addEventListener('change', function() {
+    document.getElementById('city-custom-input').style.display = this.value === 'custom' ? '' : 'none';
+  });
+
+  // Main city exploration
+  document.getElementById('btn-run-city').addEventListener('click', async function() {
+    const sel = document.getElementById('city-preset');
+    const status = document.getElementById('city-status');
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = '⏳ Loading…';
+
+    let lat, lon, cityName;
+
+    if (sel.value === 'custom') {
+      const q = document.getElementById('city-custom-input').value.trim();
+      if (!q) { status.textContent = '❌ Please type a city name.'; btn.disabled = false; btn.textContent = '🚀 Run Classification'; return; }
+      status.textContent = `🔍 Geocoding "${q}" via Nominatim…`;
+      try {
+        const geo = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, { headers: { 'User-Agent': 'ME-POIs-Interactive-Demo/1.0' } });
+        const data = await geo.json();
+        if (!data.length) { status.textContent = `❌ Could not find "${q}". Try a different city.`; btn.disabled = false; btn.textContent = '🚀 Run Classification'; return; }
+        lat = parseFloat(data[0].lat);
+        lon = parseFloat(data[0].lon);
+        cityName = data[0].display_name.split(',')[0];
+      } catch (e) { status.textContent = '❌ Geocoding failed: ' + e.message; btn.disabled = false; btn.textContent = '🚀 Run Classification'; return; }
+    } else {
+      const parts = sel.value.split(',');
+      lat = parseFloat(parts[0]);
+      lon = parseFloat(parts[1]);
+      cityName = parts[2];
+    }
+
+    status.textContent = `📡 Fetching POIs from OpenStreetMap for ${cityName}…`;
+
+    // Build Overpass query: fetch POIs within 2km radius
+    const overpassQuery = `
+      [out:json][timeout:25];
+      (
+        node["amenity"~"restaurant|cafe|fast_food|bar|pub|nightclub|pharmacy|bank|hospital"](around:2000,${lat},${lon});
+        node["shop"~"supermarket|bakery|convenience|clothes|mall"](around:2000,${lat},${lon});
+        node["tourism"~"hotel|museum"](around:2000,${lat},${lon});
+      );
+      out body 100;
+    `;
+
+    try {
+      const resp = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(overpassQuery)
+      });
+      const data = await resp.json();
+      const elements = data.elements || [];
+
+      if (elements.length === 0) {
+        status.textContent = `⚠️ No POIs found near ${cityName}. Try a larger city or different location.`;
+        btn.disabled = false; btn.textContent = '🚀 Run Classification';
+        return;
+      }
+
+      status.textContent = `✅ Found ${elements.length} real POIs in ${cityName}. Running ME-POIs classification…`;
+
+      // Process POIs
+      const cityPois = elements.map((el, i) => {
+        const cat = osmCategory(el.tags);
+        const name = (el.tags && el.tags.name) || `Unnamed ${cat} #${i+1}`;
+        const price = predictPrice(cat);
+        const closure = predictClosure(cat, !!(el.tags && el.tags.name));
+        const peak = predictPeak(cat);
+        return { id: i, name, cat, lat: el.lat, lon: el.lon, price, closure, peak, tags: el.tags || {} };
+      });
+
+      // Render map
+      document.getElementById('city-map').style.display = '';
+      document.getElementById('city-results').style.display = '';
+      document.getElementById('city-results-name').textContent = cityName;
+
+      if (cityMap) { cityMap.remove(); }
+      cityMap = L.map('city-map').setView([lat, lon], 14);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18
+      }).addTo(cityMap);
+
+      cityMarkers.forEach(m => cityMap.removeLayer(m));
+      cityMarkers = [];
+
+      const priceLbl = ['$', '$$', '$$$', '$$$$'];
+      cityPois.forEach(p => {
+        const c = PRICE_COLORS[priceLbl[p.price]];
+        const m = L.circleMarker([p.lat, p.lon], {
+          radius: 6, fillColor: c, color: '#fff', weight: 1.5, fillOpacity: 0.85
+        }).addTo(cityMap);
+        m.bindPopup(`<b>${p.name}</b><br>${p.cat}<br>Predicted: ${priceLbl[p.price]}<br>Closure risk: ${(p.closure * 100).toFixed(0)}%<br>Peak: ${p.peak}:00`);
+        cityMarkers.push(m);
+      });
+
+      // Category distribution chart
+      const catCounts = {};
+      cityPois.forEach(p => { catCounts[p.cat] = (catCounts[p.cat] || 0) + 1; });
+      const catLabels = Object.keys(catCounts).sort((a, b) => catCounts[b] - catCounts[a]);
+      const catValues = catLabels.map(k => catCounts[k]);
+      Plotly.newPlot('chart-city-cats', [{
+        labels: catLabels, values: catValues, type: 'pie', hole: 0.4,
+        marker: { colors: ['#4285F4','#EA4335','#FBBC05','#34A853','#9333ea','#ec4899','#06b6d4','#f97316','#6366f1','#84cc16'] },
+        textinfo: 'label+percent', textposition: 'outside'
+      }], {
+        margin: { t: 10, b: 10, l: 10, r: 10 },
+        paper_bgcolor: 'rgba(0,0,0,0)', font: { size: 11, family: 'Inter' },
+        showlegend: false
+      }, { responsive: true });
+
+      // Price distribution chart
+      const priceCounts = [0, 0, 0, 0];
+      cityPois.forEach(p => priceCounts[p.price]++);
+      Plotly.newPlot('chart-city-prices', [{
+        x: priceLbl, y: priceCounts, type: 'bar',
+        marker: { color: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'] },
+        text: priceCounts.map(v => v.toString()), textposition: 'auto'
+      }], {
+        margin: { t: 10, b: 36, l: 36, r: 10 },
+        xaxis: { title: 'Price Level' }, yaxis: { title: 'Count', gridcolor: '#f1f5f9' },
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { size: 11, family: 'Inter' }
+      }, { responsive: true });
+
+      // Closure risk histogram
+      const riskBins = [0, 0, 0, 0, 0];
+      cityPois.forEach(p => { const b = Math.min(4, Math.floor(p.closure * 5)); riskBins[b]++; });
+      Plotly.newPlot('chart-city-closure', [{
+        x: RISK_LABELS, y: riskBins, type: 'bar',
+        marker: { color: RISK_COLORS },
+        text: riskBins.map(v => v.toString()), textposition: 'auto'
+      }], {
+        margin: { t: 10, b: 36, l: 36, r: 10 },
+        xaxis: { title: 'Risk Level' }, yaxis: { title: 'Count', gridcolor: '#f1f5f9' },
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { size: 11, family: 'Inter' }
+      }, { responsive: true });
+
+      // Text-only vs ME-POIs F1 comparison (simulated for this city)
+      const tasks = ['Price F1', 'Hours IoU', 'Closure AUROC'];
+      const textOnly = [0.14 + Math.random() * 0.08, 0.52 + Math.random() * 0.06, 0.66 + Math.random() * 0.06];
+      const mePois = [textOnly[0] + 0.10 + Math.random() * 0.08, textOnly[1] + 0.04 + Math.random() * 0.03, textOnly[2] + 0.06 + Math.random() * 0.04];
+      Plotly.newPlot('chart-city-f1', [
+        { x: tasks, y: textOnly.map(v => +v.toFixed(3)), name: 'Text-Only', type: 'bar', marker: { color: '#d1d5db' } },
+        { x: tasks, y: mePois.map(v => +v.toFixed(3)), name: 'ME-POIs', type: 'bar', marker: { color: '#4ade80' } }
+      ], {
+        barmode: 'group',
+        margin: { t: 10, b: 36, l: 36, r: 10 },
+        yaxis: { gridcolor: '#f1f5f9', range: [0, 1] },
+        paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { size: 11, family: 'Inter' },
+        legend: { orientation: 'h', y: 1.1 }
+      }, { responsive: true });
+
+      // Table
+      document.getElementById('city-tbody').innerHTML = cityPois.slice(0, 30).map((p, i) => {
+        const riskPct = (p.closure * 100).toFixed(0);
+        const riskColor = p.closure > 0.6 ? '#ef4444' : p.closure > 0.3 ? '#f59e0b' : '#22c55e';
+        return `<tr onclick="cityMarkers[${i}] && cityMarkers[${i}].openPopup() && cityMap.panTo([${p.lat},${p.lon}])">
+          <td>${i+1}</td>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.cat}</td>
+          <td><span style="color:${PRICE_COLORS[priceLbl[p.price]]};font-weight:700">${priceLbl[p.price]}</span></td>
+          <td><span style="color:${riskColor};font-weight:600">${riskPct}%</span></td>
+          <td>${p.peak}:00</td>
+        </tr>`;
+      }).join('');
+
+      // Scroll into view
+      setTimeout(() => {
+        status.textContent = `✅ Classification complete! ${cityPois.length} venues in ${cityName} processed. Scroll down for detailed results.`;
+        document.getElementById('city-map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+
+    } catch (e) {
+      status.textContent = '❌ Overpass API error: ' + e.message + '. The API might be busy — try again in a moment.';
+    }
+
+    btn.disabled = false;
+    btn.textContent = '🚀 Run Classification';
+  });
+
+  // Make cityMarkers and cityMap accessible from inline onclick
+  window.cityMarkers = cityMarkers;
+  window.cityMap = cityMap;
 
 })();
 </script>
