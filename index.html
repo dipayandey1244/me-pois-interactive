@@ -682,13 +682,13 @@
     <div class="simple-box">
       <div class="heading">Think of it like this:</div>
       <p>
-        Imagine you've never been outside. You can only read books about restaurants. From reviews alone, could you tell the difference between a $5 pizza place and a $50 fine dining spot — if both have reviews saying "the food was amazing"? Probably not. You'd need to actually <em>go there</em> and watch what people do.
+        Imagine you've never been outside. You can only read books about restaurants. From reviews alone, could you tell the difference between a &dollar;5 pizza place and a &dollar;50 fine dining spot — if both have reviews saying "the food was amazing"? Probably not. You'd need to actually <em>go there</em> and watch what people do.
       </p>
     </div>
 
     <figure class="illustration-figure">
       <img src="img_problem.png" alt="Hand-drawn diagram showing how text reviews are misleading — reviews say 'casual coffee' but the venue is actually fine dining">
-      <figcaption>Figure 1 — Reviews say "casual coffee" and "chill vibes," but the venue is actually a $$$$ fine dining restaurant. Text alone is deceiving.</figcaption>
+      <figcaption>Figure 1 — Reviews say "casual coffee" and "chill vibes," but the venue is actually a &dollar;&dollar;&dollar;&dollar; fine dining restaurant. Text alone is deceiving.</figcaption>
     </figure>
 
     <p>
@@ -747,7 +747,7 @@
     <div class="simple-box">
       <div class="heading">The restaurant analogy, continued:</div>
       <p>
-        Now imagine you CAN go outside. You watch people at the "$5 pizza" place — they're in and out in 10 minutes, wearing jeans. At the "$50 fine dining" place — people dress up, stay for 2 hours, arrive at 8pm. Even without reading a single review, you could tell which one is expensive. <strong>That's what mobility data does for the computer.</strong>
+        Now imagine you CAN go outside. You watch people at the "&dollar;5 pizza" place — they're in and out in 10 minutes, wearing jeans. At the "&dollar;50 fine dining" place — people dress up, stay for 2 hours, arrive at 8pm. Even without reading a single review, you could tell which one is expensive. <strong>That's what mobility data does for the computer.</strong>
       </p>
     </div>
 
@@ -820,7 +820,7 @@
 
     <div class="simple-box">
       <div class="heading">Like a kid's summary:</div>
-      <p>Imagine you're standing at a café and you look around. Across the street is a tech office. Down the block is a fancy gym. Two blocks away is a wine bar. Just from looking around, you can guess this café probably serves $6 oat-milk lattes, not $1 drip coffee. The Neighborhood Scout does exactly this — it looks around each venue and learns from its neighbors.</p>
+      <p>Imagine you're standing at a café and you look around. Across the street is a tech office. Down the block is a fancy gym. Two blocks away is a wine bar. Just from looking around, you can guess this café probably serves &dollar;6 oat-milk lattes, not &dollar;1 drip coffee. The Neighborhood Scout does exactly this — it looks around each venue and learns from its neighbors.</p>
     </div>
 
     <h3>Fusion: Combining All Three Brains</h3>
@@ -1121,7 +1121,7 @@
     </div>
 
     <div class="hand-note">
-      ✏️ Why F1 and not just "accuracy"? Because accuracy is misleading when categories are imbalanced. If 95% of restaurants are $, a model that always guesses "$" gets 95% accuracy but 0% F1 on the $$/$$$/$$$$ categories. F1 forces the model to be good at ALL price tiers equally — that's why we use "Macro F1" (average F1 across all classes).
+      ✏️ Why F1 and not just "accuracy"? Because accuracy is misleading when categories are imbalanced. If 95% of restaurants are &dollar;, a model that always guesses "&dollar;" gets 95% accuracy but 0% F1 on the &dollar;&dollar;/&dollar;&dollar;&dollar;/&dollar;&dollar;&dollar;&dollar; categories. F1 forces the model to be good at ALL price tiers equally — that's why we use "Macro F1" (average F1 across all classes).
     </div>
 
     <h3>📖 All Five Metrics, Explained Simply</h3>
@@ -1133,7 +1133,7 @@
       <tbody>
         <tr>
           <td><strong>Macro F1 ↑</strong></td>
-          <td>Price Level ($–$$$$)</td>
+          <td>Price Level (&dollar;–&dollar;&dollar;&dollar;&dollar;)</td>
           <td>Can the model correctly guess each price tier without too many false alarms or misses? Averaged equally across all tiers.</td>
           <td>1.0</td>
         </tr>
@@ -1207,7 +1207,7 @@
       <div class="step-num" style="color:#9ca3af;">1</div>
       <div class="step-body">
         <h4>Text-Only → F1 = 0.269</h4>
-        <p>The model reads reviews and names but has no idea what people actually do at the venue. It correctly identifies the right price tier only about 27% of the time (balanced across all tiers). On many $$ and $$$ venues, it just guesses $ because that's the most common word pattern.</p>
+        <p>The model reads reviews and names but has no idea what people actually do at the venue. It correctly identifies the right price tier only about 27% of the time (balanced across all tiers). On many &dollar;&dollar; and &dollar;&dollar;&dollar; venues, it just guesses &dollar; because that's the most common word pattern.</p>
       </div>
     </div>
 
@@ -1240,7 +1240,7 @@
     </div>
 
     <div class="hand-note">
-      ✏️ The jump from 0.269 to 0.327 F1 might seem small, but remember: this is MACRO F1 across 4 price tiers. It means the model went from near-random guessing on rare tiers ($$$, $$$$) to actually identifying them correctly. In real-world applications, this is the difference between Google Maps showing "$" for a $$$$ restaurant and showing the correct "$$$$".
+      ✏️ The jump from 0.269 to 0.327 F1 might seem small, but remember: this is MACRO F1 across 4 price tiers. It means the model went from near-random guessing on rare tiers (&dollar;&dollar;&dollar;, &dollar;&dollar;&dollar;&dollar;) to actually identifying them correctly. In real-world applications, this is the difference between Google Maps showing "&dollar;" for a &dollar;&dollar;&dollar;&dollar; restaurant and showing the correct "&dollar;&dollar;&dollar;&dollar;".
     </div>
   </div>
 </section>
@@ -1333,14 +1333,14 @@
       <div class="heading">🧪 How Synthetic Datasets & Predictions Work</div>
       <p>
         <strong>1. How the Synthetic Dataset Was Generated:</strong><br>
-        • <strong>168-Hour Foot Traffic:</strong> Generated using daily Gaussian bell curves centered around realistic category peak hours (e.g. 8:00 AM for cafés, 12:00 PM for lunch, 10:00 PM for bars) plus Poisson noise ($\lambda=5$).<br>
-        • <strong>4 Mobility Channels:</strong> Tracks <em>Arrivals</em> (new visitors), <em>Departures</em> ($0.85 \times \text{arrivals} + \text{noise}$), <em>Dwell Time</em> (minutes spent), and <em>Density</em> ($\text{arrivals} \times \text{dwell}/60$).<br>
-        • <strong>Spatial Distances:</strong> Computed using the <em>Haversine formula</em> between all pairs of coordinates to form the GNN adjacency graph ($d \le 0.5\text{km}$ local, $0.5\text{km} < d \le 2.0\text{km}$ neighborhood).<br><br>
+        • <strong>168-Hour Foot Traffic:</strong> Generated using daily Gaussian bell curves centered around realistic category peak hours (e.g. 8:00 AM for cafés, 12:00 PM for lunch, 10:00 PM for bars) plus Poisson noise (&dollar;\lambda=5&dollar;).<br>
+        • <strong>4 Mobility Channels:</strong> Tracks <em>Arrivals</em> (new visitors), <em>Departures</em> (&dollar;0.85 \times \text{arrivals} + \text{noise}&dollar;), <em>Dwell Time</em> (minutes spent), and <em>Density</em> (&dollar;\text{arrivals} \times \text{dwell}/60&dollar;).<br>
+        • <strong>Spatial Distances:</strong> Computed using the <em>Haversine formula</em> between all pairs of coordinates to form the GNN adjacency graph (&dollar;d \le 0.5\text{km}&dollar; local, &dollar;0.5\text{km} < d \le 2.0\text{km}&dollar; neighborhood).<br><br>
 
         <strong>2. How Each Attribute Is Predicted:</strong><br>
-        • 💰 <strong>Predicted Price ($ to $$$$):</strong> CrossEntropy classification head ($\mathbf{W}_{\text{price}} \cdot h_{\text{fused}} + b$). Longer dwell times (≥90 min) + late evening arrivals + luxury neighbor context predict tier $$$/$$$$, while short dwell times (15–30 min) predict $/$$$.<br>
-        • ⚠️ <strong>Closure Risk (0% – 100%):</strong> Sigmoid probability head ($\sigma(\mathbf{W}_{\text{closure}} \cdot h_{\text{fused}} + b)$). Venues with declining foot traffic, low overall visitor density, or generic/unnamed tags get assigned high closure risk.<br>
-        • ⏰ <strong>Peak Hour (0:00 – 23:00):</strong> Extracted from the 168-hour temporal prediction head by taking $\text{argmax}_{h \in 0..23}(\text{Density}_h)$ across the weekly circadian rhythm profile.
+        • 💰 <strong>Predicted Price (&dollar; to &dollar;&dollar;&dollar;&dollar;):</strong> CrossEntropy classification head (&dollar;\mathbf{W}_{\text{price}} \cdot h_{\text{fused}} + b&dollar;). Longer dwell times (≥90 min) + late evening arrivals + luxury neighbor context predict tier &dollar;&dollar;&dollar;/&dollar;&dollar;&dollar;&dollar;, while short dwell times (15–30 min) predict &dollar;/&dollar;&dollar;&dollar;.<br>
+        • ⚠️ <strong>Closure Risk (0% – 100%):</strong> Sigmoid probability head (&dollar;\sigma(\mathbf{W}_{\text{closure}} \cdot h_{\text{fused}} + b)&dollar;). Venues with declining foot traffic, low overall visitor density, or generic/unnamed tags get assigned high closure risk.<br>
+        • ⏰ <strong>Peak Hour (0:00 – 23:00):</strong> Extracted from the 168-hour temporal prediction head by taking &dollar;\text{argmax}_{h \in 0..23}(\text{Density}_h)&dollar; across the weekly circadian rhythm profile.
       </p>
     </div>
 
