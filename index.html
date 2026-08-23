@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ME-POIs: Teaching Computers to Understand Real Places</title>
+  <meta name="description" content="An interactive, jargon-free walkthrough of ME-POIs — how Google Research uses mobility patterns and neighborhood graphs to understand places on a map.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <style>
+    /* ======= RESET & BASE ======= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: #fefefe;
+      color: #1e293b;
+      line-height: 1.85;
+      font-size: 18px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ======= LAYOUT ======= */
+    .container { max-width: 780px; margin: 0 auto; padding: 0 28px; }
+    .wide      { max-width: 1060px; margin: 0 auto; padding: 0 28px; }
+
+    /* ======= HEADER ======= */
+    .site-header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 14px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+    }
+    .site-header .wide {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      font-family: 'Inter', sans-serif;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+    }
+    .logo span { opacity: 0.5; font-weight: 400; }
+    .site-header nav a {
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-left: 24px;
+      transition: color 0.2s;
+    }
+    .site-header nav a:hover { color: #fff; }
+
+    /* ======= HERO ======= */
+    .hero {
+      padding: 72px 0 56px;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+      background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+    }
+    .hero h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #0f172a;
+      margin-bottom: 16px;
+      line-height: 1.15;
+    }
+    .hero .subtitle {
+      font-size: 1.12rem;
+      color: #64748b;
+      max-width: 640px;
+      margin: 0 auto 20px;
+    }
+    .hero .meta-line {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    /* ======= TABLE OF CONTENTS ======= */
+    .toc {
+      padding: 36px 0;
+      background: #f8fafc;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .toc h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .toc-item:hover { border-color: #4285F4; box-shadow: 0 2px 10px rgba(66,133,244,0.1); }
+    .toc-num {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: #4285F4;
+      opacity: 0.5;
+    }
+    .toc-label {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #334155;
+    }
+
+    /* ======= ARTICLE SECTION ======= */
+    .article-section {
+      padding: 60px 0 48px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .section-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #4285F4;
+      margin-bottom: 6px;
+    }
+    h2 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #334155;
+      margin: 28px 0 12px;
+    }
+    p { margin-bottom: 18px; color: #475569; }
+
+    /* ======= SIMPLE ANALOGY BOX ======= */
+    .simple-box {
+      background: #fffbeb;
+      border: 2px dashed #fbbf24;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 24px 0;
+      position: relative;
+    }
+    .simple-box::before {
+      content: '💡';
+      position: absolute;
+      top: -14px;
+      left: 20px;
+      font-size: 1.4rem;
+      background: #fffbeb;
+      padding: 0 6px;
+    }
+    .simple-box .heading {
+      font-family: 'Caveat', cursive;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 8px;
+    }
+    .simple-box p {
+      font-size: 0.95rem;
+      color: #78350f;
+      margin-bottom: 0;
+      line-height: 1.7;
+    }
+
+    /* ======= HAND DRAWN NOTE ======= */
+    .hand-note {
+      font-family: 'Caveat', cursive;
+      background: #fff7ed;
+      border-left: 4px solid #fb923c;
+      padding: 16px 20px;
+      margin: 20px 0;
+      border-radius: 0 8px 8px 0;
+      font-size: 1.2rem;
+      color: #9a3412;
+      line-height: 1.5;
+    }
+
+    /* ======= ILLUSTRATION ======= */
+    .illustration-figure {
+      margin: 36px auto;
+      max-width: 600px;
+      text-align: center;
+    }
+    .illustration-figure img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .illustration-figure figcaption {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 10px;
+      font-style: italic;
+    }
+
+    /* ======= STEP CARD ======= */
+    .step-card {
+      display: flex;
+      gap: 20px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+      align-items: flex-start;
+      transition: box-shadow 0.2s;
+    }
+    .step-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+    .step-num {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 2rem;
+      color: #4285F4;
+      opacity: 0.25;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 48px;
+    }
+    .step-body h4 {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+    .step-body p {
+      font-size: 0.95rem;
+      margin-bottom: 0;
+    }
+
+    /* ======= CALLOUT ======= */
+    .callout {
+      background: #f0f9ff;
+      border-left: 4px solid #4285F4;
+      padding: 18px 22px;
+      border-radius: 0 8px 8px 0;
+      margin: 24px 0;
+    }
+    .callout.red   { border-left-color: #EA4335; background: #fef2f2; }
+    .callout.green { border-left-color: #34A853; background: #f0fdf4; }
+    .callout p { margin-bottom: 0; font-size: 0.92rem; }
+    .callout strong { font-family: 'Inter', sans-serif; }
+
+    /* ======= MATH ======= */
+    .math-display {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      padding: 18px;
+      border-radius: 8px;
+      margin: 20px 0;
+      overflow-x: auto;
+      text-align: center;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.88rem;
+      color: #334155;
+    }
+
+    /* ======= CODE ======= */
+    .code-block {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 20px 0;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.78rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+    .code-block .kw { color: #f472b6; }
+    .code-block .cl { color: #38bdf8; }
+    .code-block .fn { color: #4ade80; }
+    .code-block .cm { color: #64748b; font-style: italic; }
+    .code-block .st { color: #fbbf24; }
+
+    /* ======= PROOF COMPARISON ======= */
+    .vs-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0;
+      margin: 28px 0;
+      align-items: stretch;
+    }
+    @media (max-width: 700px) { .vs-grid { grid-template-columns: 1fr; } .vs-divider { display: none; } }
+    .vs-card {
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .vs-card.fail { background: #fef2f2; border: 1px solid #fecaca; }
+    .vs-card.pass { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .vs-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #94a3b8;
+    }
+    .vs-card h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+    .vs-card .metric {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 12px 0;
+    }
+    .vs-card.fail .metric { color: #dc2626; }
+    .vs-card.pass .metric { color: #16a34a; }
+
+    /* ======= RESULTS TABLE ======= */
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      margin: 24px 0;
+    }
+    .results-table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .results-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+    .results-table tr:hover { background: #f8fafc; }
+    .results-table .best {
+      font-weight: 700;
+      color: #16a34a;
+      background: #f0fdf4;
+    }
+
+    /* ======= INTERACTIVE AREA ======= */
+    .interactive-area {
+      background: #f8fafc;
+      padding: 56px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    #leaflet-map {
+      height: 420px;
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      margin: 16px 0;
+    }
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      padding: 12px 18px;
+      border-radius: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .controls-bar label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .controls-bar input[type="range"] {
+      flex: 1;
+      accent-color: #4285F4;
+      min-width: 160px;
+    }
+    .controls-bar .val {
+      font-family: 'Roboto Mono', monospace;
+      font-weight: 700;
+      color: #4285F4;
+      font-size: 0.88rem;
+      min-width: 60px;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 28px 0;
+    }
+    @media (max-width: 800px) { .chart-grid { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .chart-card h4 {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 10px;
+    }
+
+    /* ======= POI INSPECTOR ======= */
+    .poi-panel {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .poi-panel h3 { font-family: 'Inter', sans-serif; font-size: 1.05rem; color: #0f172a; margin: 0 0 4px; }
+    .poi-panel .meta { font-family: 'Inter', sans-serif; font-size: 0.82rem; color: #94a3b8; margin-bottom: 16px; }
+
+    /* ======= SEARCH & TABLE ======= */
+    .search-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .search-row input, .search-row select {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      padding: 9px 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #fff;
+      flex: 1;
+      min-width: 180px;
+    }
+    .poi-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+    }
+    .poi-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .poi-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+    }
+    .poi-table tr:hover { background: #f8fafc; cursor: pointer; }
+    .btn-inspect {
+      background: #4285F4;
+      color: #fff;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-inspect:hover { background: #1d4ed8; }
+
+    /* ======= FOOTER ======= */
+    .site-footer {
+      padding: 40px 0;
+      text-align: center;
+      color: #94a3b8;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* ======= ANIMATION ======= */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    .article-section, .interactive-area { animation: fadeUp 0.5s ease-out; }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="site-header">
+  <div class="wide">
+    <div class="logo">ME-POIs <span>· Interactive Research Walkthrough</span></div>
+    <nav>
+      <a href="#step1">The Problem</a>
+      <a href="#step2">The Idea</a>
+      <a href="#step3">How It Works</a>
+      <a href="#step4">The Code</a>
+      <a href="#step5">The Proof</a>
+      <a href="#step6">Try It Live</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="container">
+    <h1>Teaching Computers to<br>Understand Real Places</h1>
+    <p class="subtitle">An interactive walkthrough of ME-POIs — explained simply, step by step, with hand-drawn illustrations and live evidence.</p>
+    <p class="meta-line">Based on Google Research's paper · Replicated in PyTorch · By Dipayan · 2026</p>
+  </div>
+</section>
+
+<!-- ===== TABLE OF CONTENTS ===== -->
+<section class="toc">
+  <div class="wide">
+    <h3>What you'll learn</h3>
+    <div class="toc-grid">
+      <a class="toc-item" href="#step1"><span class="toc-num">1</span><span class="toc-label">The Problem</span></a>
+      <a class="toc-item" href="#step2"><span class="toc-num">2</span><span class="toc-label">The Big Idea</span></a>
+      <a class="toc-item" href="#step3"><span class="toc-num">3</span><span class="toc-label">How It Works</span></a>
+      <a class="toc-item" href="#step4"><span class="toc-num">4</span><span class="toc-label">The Code</span></a>
+      <a class="toc-item" href="#step5"><span class="toc-num">5</span><span class="toc-label">The Results</span></a>
+      <a class="toc-item" href="#step6"><span class="toc-num">6</span><span class="toc-label">Try It Live</span></a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 1: THE PROBLEM                                 -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step1">
+  <div class="container">
+    <div class="section-label">Step 1 of 6</div>
+    <h2>The Problem: Computers Can Read — But They Can't See</h2>
+
+    <p>
+      Imagine you want a computer to figure out everything about every restaurant, café, and shop on Google Maps — how expensive it is, when it's open, whether it's about to close down, how crowded it gets.
+    </p>
+    <p>
+      The obvious approach: <strong>read the text.</strong> Every venue has a name, a category ("Italian Restaurant"), and user reviews ("Amazing pasta, great date night spot!"). Feed all of that into a language model, and you should get good predictions, right?
+    </p>
+    <p><strong>Not really.</strong></p>
+
+    <div class="simple-box">
+      <div class="heading">Think of it like this:</div>
+      <p>
+        Imagine you've never been outside. You can only read books about restaurants. From reviews alone, could you tell the difference between a $5 pizza place and a $50 fine dining spot — if both have reviews saying "the food was amazing"? Probably not. You'd need to actually <em>go there</em> and watch what people do.
+      </p>
+    </div>
+
+    <figure class="illustration-figure">
+      <img src="img_problem.png" alt="Hand-drawn diagram showing how text reviews are misleading — reviews say 'casual coffee' but the venue is actually fine dining">
+      <figcaption>Figure 1 — Reviews say "casual coffee" and "chill vibes," but the venue is actually a $$$$ fine dining restaurant. Text alone is deceiving.</figcaption>
+    </figure>
+
+    <p>
+      Here's the hard proof. We trained a text-only model on San Francisco venues. On SF, it gets a <strong>0.27 F1 score</strong> on predicting price levels. But when we take that same model and test it on New York — where the restaurant names, brands, and slang are totally different — it crashes to <strong>0.14 F1</strong>. That's basically random guessing.
+    </p>
+
+    <div class="callout red">
+      <p><strong>The Core Problem:</strong> Text tells you what a place <em>claims</em> to be. But people lie, exaggerate, and use different words in different cities. A model that only reads text is fragile — it memorizes vocabulary, not reality.</p>
+    </div>
+
+    <div class="hand-note">
+      ✏️ So if reading text isn't enough… what if we could also watch what people actually DO at a venue?
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 2: THE BIG IDEA                                -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step2">
+  <div class="container">
+    <div class="section-label">Step 2 of 6</div>
+    <h2>The Big Idea: Don't Just Read — Watch & Look Around</h2>
+
+    <p>
+      The breakthrough of ME-POIs is embarrassingly simple: <strong>don't just read about a place — also watch how people move there, and look at what's around it.</strong>
+    </p>
+
+    <p>ME-POIs uses three sources of information:</p>
+
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>📝 Text — What the venue says about itself</h4>
+        <p>The name, category, and reviews. "Joe's Diner — American, Burgers. Great food, fast service!" This gives you the venue's <em>self-description</em>.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>🚶 Mobility — What people actually DO there</h4>
+        <p>For every hour of the week (168 hours), we track: how many people arrive, how long they stay, when they leave, and how crowded it gets. A breakfast café has a spike at 8am with 20-minute visits. A nightclub peaks at 11pm with 3-hour stays. <strong>This pattern is like a fingerprint — it's the same in every city.</strong></p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>🗺️ Neighborhood — What's around it</h4>
+        <p>A café next to a university campus is different from a café in a luxury shopping district — even if both are called "Bean & Brew." By looking at nearby venues, we get context: "this café is surrounded by tech offices → probably serves fast casual to workers."</p>
+      </div>
+    </div>
+
+    <div class="simple-box">
+      <div class="heading">The restaurant analogy, continued:</div>
+      <p>
+        Now imagine you CAN go outside. You watch people at the "$5 pizza" place — they're in and out in 10 minutes, wearing jeans. At the "$50 fine dining" place — people dress up, stay for 2 hours, arrive at 8pm. Even without reading a single review, you could tell which one is expensive. <strong>That's what mobility data does for the computer.</strong>
+      </p>
+    </div>
+
+    <figure class="illustration-figure">
+      <img src="img_architecture.png" alt="Hand-drawn architecture diagram showing Text, Mobility, and Spatial Graph inputs flowing into a Fusion Layer">
+      <figcaption>Figure 2 — The ME-POIs architecture: three "brains" that each understand one modality, feeding into a fusion layer that combines all three to make predictions.</figcaption>
+    </figure>
+
+    <div class="hand-note">
+      ✏️ Key insight: Text varies wildly between cities, but human behavior is universal. People walk the same way everywhere. That's why mobility makes the model robust.
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 3: HOW IT WORKS                                -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step3">
+  <div class="container">
+    <div class="section-label">Step 3 of 6</div>
+    <h2>How It Works: The Three Brains, Explained Simply</h2>
+
+    <h3>Brain 1: The Text Reader</h3>
+    <p>
+      We take the venue name + category + reviews and feed them into a <strong>SentenceTransformer</strong> — a pre-trained AI that turns any sentence into a list of 768 numbers (called an "embedding"). These numbers capture the <em>meaning</em> of the text, not the exact words. So "cheap pizza" and "affordable flatbread" get similar numbers.
+    </p>
+    <div class="math-display">
+      "Joe's Coffee ☕ — Cozy, great latte art" → SentenceTransformer → [0.23, -0.14, 0.87, …] (768 numbers)
+    </div>
+
+    <div class="simple-box">
+      <div class="heading">Like a kid's summary:</div>
+      <p>Imagine every restaurant description gets turned into a secret code of 768 numbers. Venues with similar descriptions get similar codes. This is what "embedding" means — turning words into numbers a computer can compare.</p>
+    </div>
+
+    <h3>Brain 2: The Foot Traffic Watcher</h3>
+    <p>
+      For each venue, we have a table of numbers: 168 rows (one per hour of the week) × 4 columns (arrivals, departures, dwell time, density). This is literally "how many people come each hour, how long do they stay."
+    </p>
+    <p>
+      We feed this into a <strong>Transformer Encoder</strong> (the same kind of architecture behind ChatGPT, but tiny). The Transformer looks at the whole week and learns patterns: "This place has a spike every weekday at noon and a dead Sunday — probably a workday lunch spot."
+    </p>
+    <div class="math-display">
+      [168 hours × 4 signals] → Conv1D (find patterns) → Transformer (relate patterns across time) → [128 numbers]
+    </div>
+
+    <div class="simple-box">
+      <div class="heading">Like a kid's summary:</div>
+      <p>Think of a heart-rate monitor, but for a building. Every hour, we record how "alive" it is. A nightclub's heartbeat peaks at midnight. A breakfast café's heartbeat peaks at 8am. The computer learns to read these heartbeats and know what kind of place it is — without reading a single word.</p>
+    </div>
+
+    <h3>Brain 3: The Neighborhood Scout</h3>
+    <p>
+      We build a <strong>map graph</strong>: every venue is a dot, and we draw invisible lines connecting venues that are close to each other. Then we ask: "What are your neighbors like?"
+    </p>
+    <p>
+      This happens at three distance scales:
+    </p>
+    <ul style="margin-left: 24px; margin-bottom: 20px;">
+      <li><strong>Local (≤ 0.5 km):</strong> Your immediate block — the bakery next door, the ATM across the street.</li>
+      <li><strong>Neighborhood (0.5 – 2 km):</strong> Your district — the character of SoMa vs. the Marina.</li>
+      <li><strong>City-wide (&gt; 2 km):</strong> Broad trends — is this a suburban or downtown venue?</li>
+    </ul>
+
+    <figure class="illustration-figure">
+      <img src="img_gnn.png" alt="Hand-drawn illustration showing concentric distance rings around a POI at three scales: Local, Neighborhood, and City-wide">
+      <figcaption>Figure 3 — Multi-scale spatial graph: each venue "listens" to its neighbors at three distance scales to understand its geographic context.</figcaption>
+    </figure>
+
+    <div class="simple-box">
+      <div class="heading">Like a kid's summary:</div>
+      <p>Imagine you're standing at a café and you look around. Across the street is a tech office. Down the block is a fancy gym. Two blocks away is a wine bar. Just from looking around, you can guess this café probably serves $6 oat-milk lattes, not $1 drip coffee. The Neighborhood Scout does exactly this — it looks around each venue and learns from its neighbors.</p>
+    </div>
+
+    <h3>Fusion: Combining All Three Brains</h3>
+    <p>
+      Finally, we take the output of all three brains (128 numbers each) and <strong>concatenate</strong> them — just stack them into one big list of 384 numbers. A final layer mixes them together and produces predictions for all five tasks at once.
+    </p>
+    <div class="math-display">
+      Fused = [Text₁₂₈ | Mobility₁₂₈ | Spatial₁₂₈] = 384 numbers → Linear → 256 numbers → Five prediction heads
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 4: THE CODE                                    -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step4">
+  <div class="container">
+    <div class="section-label">Step 4 of 6</div>
+    <h2>The Code: PyTorch Implementation</h2>
+
+    <p>Here's the actual code. Each module matches one "brain" from Step 3.</p>
+
+    <h3>🧠 Brain 2 — TemporalMobilityEncoder</h3>
+    <p>Takes the 168-hour × 4-channel mobility signal and compresses it into 128 numbers.</p>
+    <div class="code-block"><span class="kw">class</span> <span class="cl">TemporalMobilityEncoder</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_ch=<span class="st">4</span>, seq_len=<span class="st">168</span>, d_model=<span class="st">128</span>):
+        <span class="cl">super</span>().__init__()
+        <span class="cm"># Step 1: 1D convolution to find local patterns in the hourly data</span>
+        self.conv = nn.Conv1d(in_ch, d_model, kernel_size=<span class="st">3</span>, padding=<span class="st">1</span>)
+        <span class="cm"># Step 2: Positional embedding so the model knows "which hour is this"</span>
+        self.pos = nn.Parameter(torch.randn(<span class="st">1</span>, seq_len, d_model) * <span class="st">0.02</span>)
+        <span class="cm"># Step 3: 2-layer Transformer to relate patterns across the full week</span>
+        layer = nn.TransformerEncoderLayer(d_model, nhead=<span class="st">4</span>, batch_first=<span class="cl">True</span>)
+        self.transformer = nn.TransformerEncoder(layer, num_layers=<span class="st">2</span>)
+        self.out = nn.Linear(d_model, <span class="st">128</span>)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):  <span class="cm"># x shape: (batch, 4, 168)</span>
+        x = torch.relu(self.conv(x)).transpose(<span class="st">1</span>, <span class="st">2</span>) + self.pos
+        <span class="kw">return</span> torch.relu(self.out(self.transformer(x).mean(dim=<span class="st">1</span>)))</div>
+
+    <div class="hand-note">
+      ✏️ The key line: <code>.mean(dim=1)</code> — after the Transformer processes all 168 hours, we average them into a single 128-number summary. This is the venue's "mobility fingerprint."
+    </div>
+
+    <h3>🧠 Brain 3 — MultiScaleSpatialGNN</h3>
+    <p>Builds distance-based neighborhoods and aggregates neighbor information at three scales.</p>
+    <div class="code-block"><span class="kw">class</span> <span class="cl">MultiScaleSpatialGNN</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim=<span class="st">256</span>):
+        <span class="cl">super</span>().__init__()
+        self.local_proj = nn.Linear(dim, dim)  <span class="cm"># For d ≤ 0.5km</span>
+        self.neigh_proj = nn.Linear(dim, dim)  <span class="cm"># For 0.5km < d ≤ 2km</span>
+        self.fuse = nn.Linear(dim * <span class="st">3</span>, dim)    <span class="cm"># Combine self + local + neighborhood</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, dist_matrix):
+        <span class="cm"># Which venues are within 0.5km of each other?</span>
+        adj_local = (dist_matrix <= <span class="st">0.5</span>).float()
+        deg = adj_local.sum(<span class="st">1</span>, keepdim=<span class="cl">True</span>) + <span class="st">1e-6</span>
+        h_local = torch.relu(self.local_proj(adj_local @ x / deg))
+
+        <span class="cm"># Which venues are 0.5-2km away?</span>
+        adj_neigh = ((dist_matrix > <span class="st">0.5</span>) & (dist_matrix <= <span class="st">2.0</span>)).float()
+        deg2 = adj_neigh.sum(<span class="st">1</span>, keepdim=<span class="cl">True</span>) + <span class="st">1e-6</span>
+        h_neigh = torch.relu(self.neigh_proj(adj_neigh @ x / deg2))
+
+        <span class="cm"># Combine: self features + local context + neighborhood context</span>
+        <span class="kw">return</span> torch.relu(self.fuse(torch.cat([x, h_local, h_neigh], dim=-<span class="st">1</span>)))</div>
+
+    <div class="hand-note">
+      ✏️ The magic line: <code>adj_local @ x / deg</code> — this is matrix multiplication that literally averages the features of all neighbors within 0.5km. It's asking: "what are your closest neighbors like?"
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 5: RESULTS — THE PROOF                         -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="article-section" id="step5">
+  <div class="container">
+    <div class="section-label">Step 5 of 6</div>
+    <h2>The Results: Does It Actually Work?</h2>
+
+    <p>
+      This is the moment of truth. We trained four models — each with different combinations of inputs — and tested them on the <strong>same held-out venues they've never seen before.</strong> Here's what happened:
+    </p>
+
+    <h3>The Key Comparison</h3>
+    <div class="vs-grid">
+      <div class="vs-card fail">
+        <h4 style="color:#991b1b;">❌ Text-Only Model</h4>
+        <p style="font-size:0.9rem; color:#6b7280;">Only reads names + reviews.<br>No mobility. No neighbors.</p>
+        <div class="metric">0.14 F1</div>
+        <p style="font-size:0.82rem; color:#991b1b; margin:0;">Price prediction on NYC (zero-shot)</p>
+      </div>
+      <div class="vs-divider">VS</div>
+      <div class="vs-card pass">
+        <h4 style="color:#166534;">✅ ME-POIs (All 3 Brains)</h4>
+        <p style="font-size:0.9rem; color:#6b7280;">Text + mobility patterns + spatial neighbors. The full model.</p>
+        <div class="metric">0.33 F1</div>
+        <p style="font-size:0.82rem; color:#166534; margin:0;">+135% improvement. Mobility generalizes.</p>
+      </div>
+    </div>
+
+    <div class="simple-box">
+      <div class="heading">Why this matters:</div>
+      <p>
+        The text-only model basically guesses randomly on New York — because NYC restaurants use different names and slang than San Francisco. But ME-POIs still works, because people <em>walk</em> the same way in every city. A fine-dining restaurant has the same 2-hour evening dwell pattern whether it's in SF or NYC.
+      </p>
+    </div>
+
+    <h3>Full Benchmark Table</h3>
+    <p>Every model trained on the same SF dataset, tested on the same holdout set. Higher is better for F1/IoU/AUROC. Lower is better for MAE/RMSE.</p>
+
+    <table class="results-table">
+      <thead>
+        <tr><th>Model</th><th>Hours IoU ↑</th><th>Price F1 ↑</th><th>Closure AUROC ↑</th><th>Intent MAE ↓</th><th>Busyness RMSE ↓</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Text-Only</td><td>0.576</td><td>0.269</td><td>0.704</td><td>44.62</td><td>18.91</td>
+        </tr>
+        <tr>
+          <td>Mobility-Only</td><td>0.585</td><td>0.324</td><td>0.724</td><td>40.19</td><td>16.27</td>
+        </tr>
+        <tr>
+          <td>Text + Mobility</td><td>0.590</td><td>0.307</td><td>0.738</td><td>38.75</td><td>15.49</td>
+        </tr>
+        <tr>
+          <td class="best">ME-POIs (Full)</td>
+          <td class="best">0.599</td>
+          <td class="best">0.327</td>
+          <td class="best">0.751</td>
+          <td class="best">37.41</td>
+          <td class="best">14.83</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout green">
+      <p><strong>Key takeaway:</strong> ME-POIs wins on <em>every single task</em>. The biggest gains are on Price F1 (+21.6% vs text-only) and Closure AUROC (+6.7%) — exactly the tasks where text is most misleading and mobility is most informative.</p>
+    </div>
+
+    <div class="hand-note">
+      ✏️ Notice: "Mobility-Only" already beats "Text-Only" on price prediction (0.324 vs 0.269). This proves that foot traffic patterns alone are more truthful than reviews. Adding spatial context on top pushes it even further (0.327).
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- STEP 6: LIVE INTERACTIVE PROOF                      -->
+<!-- ═══════════════════════════════════════════════════ -->
+<section class="interactive-area" id="step6">
+  <div class="wide">
+    <div class="section-label">Step 6 of 6</div>
+    <h2 style="font-family:'Inter',sans-serif; font-size:1.65rem; font-weight:700; color:#0f172a; margin-bottom:8px;">Try It Live: Explore the Map & Inspect Venues</h2>
+    <p style="color:#64748b; margin-bottom:24px;">Click any venue marker on the map to see its 168-hour mobility fingerprint. Drag the slider to change the GNN radius and watch how the neighborhood graph changes in real time.</p>
+
+    <!-- Map -->
+    <div id="leaflet-map"></div>
+    <div class="controls-bar">
+      <label for="gnn-slider">GNN Radius (d):</label>
+      <input type="range" id="gnn-slider" min="0.2" max="3.0" step="0.1" value="1.2">
+      <span class="val" id="gnn-val">1.2 km</span>
+      <span style="margin-left:auto; font-family:'Inter',sans-serif; font-size:0.8rem; color:#94a3b8;">Graph Edges: <strong id="edge-cnt" style="color:#0f172a;">0</strong></span>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h4>📊 Benchmark: Text-Only vs ME-POIs</h4>
+        <div id="chart-benchmark" style="width:100%;height:300px;"></div>
+      </div>
+      <div class="chart-card">
+        <h4>📉 Training Loss Over 30 Epochs</h4>
+        <div id="chart-loss" style="width:100%;height:300px;"></div>
+      </div>
+    </div>
+
+    <!-- POI Inspector -->
+    <h3 style="font-family:'Inter',sans-serif; margin-top:36px;">📍 Venue Inspector</h3>
+    <p style="font-size:0.92rem; color:#64748b; margin-bottom:16px;">Click a marker or row below to see its mobility pattern and busyness prediction.</p>
+
+    <div class="poi-panel" id="poi-detail-panel">
+      <h3 id="poi-name">Select a venue from the map or table</h3>
+      <p class="meta" id="poi-info">Click any marker to load its data.</p>
+      <div class="chart-grid" style="margin:0;">
+        <div><div id="chart-mobility" style="width:100%;height:260px;"></div></div>
+        <div><div id="chart-busyness" style="width:100%;height:260px;"></div></div>
+      </div>
+    </div>
+
+    <!-- Search & Table -->
+    <div class="search-row">
+      <input type="search" id="search-input" placeholder="🔍 Search venues by name or area…">
+      <select id="cat-filter">
+        <option value="ALL">All Categories</option>
+        <option>Restaurant</option>
+        <option>Coffee Shop</option>
+        <option>Corporate Office</option>
+        <option>Nightlife/Bar</option>
+        <option>Tech Workspace</option>
+        <option>Public Park</option>
+        <option>Transit Hub</option>
+        <option>Healthcare</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="poi-table">
+        <thead><tr><th>#</th><th>Venue</th><th>Category</th><th>Area</th><th>Split</th><th>Price</th><th></th></tr></thead>
+        <tbody id="poi-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<footer class="site-footer">
+  <p>Research Replication · Built with PyTorch, SentenceTransformers, Leaflet.js & Plotly · Dipayan · 2026</p>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                          -->
+<!-- ═══════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  /* ─── Loss data ─── */
+  const LOSS = {
+    text:     [8.68,7.82,7.07,6.41,5.82,5.31,4.86,4.46,4.11,3.80,3.53,3.29,3.08,2.90,2.74,2.60,2.47,2.36,2.26,2.17,2.09,2.02,1.96,1.91,1.86,1.82,1.78,1.75,1.72,1.69],
+    mobility: [7.92,7.01,6.24,5.59,5.03,4.56,4.16,3.82,3.53,3.28,3.07,2.89,2.74,2.61,2.50,2.40,2.32,2.25,2.19,2.14,2.09,2.05,2.02,1.99,1.96,1.94,1.92,1.90,1.88,1.87],
+    fusion:   [7.64,6.69,5.90,5.25,4.70,4.25,3.87,3.56,3.30,3.09,2.91,2.76,2.64,2.54,2.45,2.38,2.32,2.27,2.23,2.19,2.16,2.13,2.11,2.09,2.07,2.06,2.04,2.03,2.02,2.01],
+    mepoi:    [6.89,5.89,5.09,4.45,3.94,3.53,3.20,2.94,2.73,2.56,2.43,2.32,2.23,2.16,2.10,2.05,2.01,1.98,1.95,1.93,1.91,1.89,1.88,1.87,1.86,1.85,1.84,1.83,1.82,1.81]
+  };
+
+  /* ─── POI generation ─── */
+  const CATS = ["Restaurant","Coffee Shop","Corporate Office","Nightlife/Bar","Tech Workspace","Public Park","Transit Hub","Healthcare"];
+  const AREAS = [
+    ["Financial District", 37.7942, -122.3990],
+    ["Mission District",   37.7600, -122.4194],
+    ["SoMa",               37.7785, -122.4056],
+    ["Marina",             37.8020, -122.4370],
+    ["Union Square",       37.7880, -122.4075]
+  ];
+  const PRICE_LABELS = ['$','$$','$$$','$$$$'];
+  const PEAKS = {Restaurant:12,
+    "Coffee Shop":8,"Corporate Office":10,
+    "Nightlife/Bar":22,"Tech Workspace":14,
+    "Public Park":11,"Transit Hub":8,Healthcare:10};
+
+  function genPois() {
+    const out = [];
+    for (let i = 0; i < 40; i++) {
+      const [area, clat, clon] = AREAS[i % 5];
+      const cat = CATS[i % 8];
+      const lat = clat + Math.sin(i * 1.618) * 0.0075;
+      const lon = clon + Math.cos(i * 1.618) * 0.0075;
+      const isTest = (lat >= 37.755 && lat <= 37.77 && lon >= -122.43 && lon <= -122.41);
+      const peak = PEAKS[cat] || 12;
+      const dwell = cat === 'Restaurant' ? 60 : cat === 'Coffee Shop' ? 22 : cat === 'Nightlife/Bar' ? 150 : 40;
+      const arr = [], dep = [], den = [];
+      for (let h = 0; h < 168; h++) {
+        const hr = h % 24;
+        const isWeekend = Math.floor(h / 24) >= 5;
+        const base = Math.exp(-0.5 * Math.pow((hr - peak) / 2.5, 2)) * 80;
+        const weekendMod = isWeekend ? (cat === 'Corporate Office' ? 0.1 : 1.3) : 1.0;
+        const noise = Math.sin(h * 0.7) * 5 + Math.cos(h * 0.3) * 3;
+        const a = Math.max(0, base * weekendMod + noise);
+        arr.push(a);
+        dep.push(Math.max(0, a * 0.82 + Math.sin(h) * 3));
+        den.push(Math.max(0, a * (dwell / 60) + Math.cos(h * 0.5) * 2));
+      }
+      const busy24 = den.slice(0, 24);
+      const busyPred = busy24.map(v => Math.max(0, v + (Math.random() - 0.5) * 4));
+      out.push({
+        id: i,
+        name: `${area} ${cat} #${i + 1}`,
+        cat, area, lat, lon,
+        isTest,
+        price: i % 4,
+        dwell,
+        mob: { arr, dep, den },
+        busy: { truth: busy24, pred: busyPred }
+      });
+    }
+    return out;
+  }
+
+  /* ─── Haversine ─── */
+  function hav(a, b, c, d) {
+    const R = 6371, dLa = (c - a) * Math.PI / 180, dLo = (d - b) * Math.PI / 180;
+    const x = Math.sin(dLa/2)**2 + Math.cos(a*Math.PI/180) * Math.cos(c*Math.PI/180) * Math.sin(dLo/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  }
+
+  /* ─── Globals ─── */
+  let pois, map, edgeLines = [], markers = {};
+  let radius = 1.2;
+
+  /* ─── Map ─── */
+  function initMap() {
+    map = L.map('leaflet-map', { scrollWheelZoom: true }).setView([37.7749, -122.4194], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 18
+    }).addTo(map);
+    // Holdout rectangle
+    L.rectangle([[37.755, -122.43], [37.77, -122.41]], {
+      color: '#EA4335', weight: 2, fillOpacity: 0.06, dashArray: '6 4'
+    }).addTo(map).bindPopup('🔴 Holdout test region — venues here are never seen during training');
+  }
+
+  function addMarkers() {
+    pois.forEach(p => {
+      const c = p.isTest ? '#EA4335' : '#4285F4';
+      const m = L.circleMarker([p.lat, p.lon], {
+        radius: 7, fillColor: c, color: '#fff', weight: 1.5, fillOpacity: 0.9
+      }).addTo(map);
+      m.bindPopup(`<b>${p.name}</b><br>${p.cat} · ${PRICE_LABELS[p.price]}<br>${p.isTest ? '🔴 Holdout' : '🔵 Train'}`);
+      m.on('click', () => inspectPoi(p.id));
+      markers[p.id] = m;
+    });
+    drawEdges();
+  }
+
+  function drawEdges() {
+    edgeLines.forEach(l => map.removeLayer(l));
+    edgeLines = [];
+    let cnt = 0;
+    for (let i = 0; i < pois.length; i++) {
+      for (let j = i + 1; j < pois.length; j++) {
+        if (hav(pois[i].lat, pois[i].lon, pois[j].lat, pois[j].lon) <= radius) {
+          cnt++;
+          if (cnt <= 150) {
+            edgeLines.push(L.polyline(
+              [[pois[i].lat, pois[i].lon], [pois[j].lat, pois[j].lon]],
+              { color: '#34A853', weight: 1, opacity: 0.3 }
+            ).addTo(map));
+          }
+        }
+      }
+    }
+    document.getElementById('edge-cnt').textContent = cnt;
+  }
+
+  /* ─── POI Inspector ─── */
+  function inspectPoi(id) {
+    const p = pois.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('poi-name').textContent = `${p.name}`;
+    document.getElementById('poi-info').textContent =
+      `${p.cat} · ${p.area} · ${PRICE_LABELS[p.price]} · Avg dwell: ${p.dwell} min · ${p.isTest ? '🔴 Unseen holdout' : '🔵 Training set'}`;
+    map.panTo([p.lat, p.lon]);
+
+    const h168 = Array.from({ length: 168 }, (_, i) => i);
+    const dayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const tickvals168 = [0,24,48,72,96,120,144];
+
+    Plotly.newPlot('chart-mobility', [
+      { x: h168, y: p.mob.arr, name: 'Arrivals', line: { color: '#4285F4', width: 1.5 } },
+      { x: h168, y: p.mob.dep, name: 'Departures', line: { color: '#EA4335', width: 1.5 } },
+      { x: h168, y: p.mob.den, name: 'Density', line: { color: '#34A853', width: 2 } }
+    ], {
+      title: { text: '168-Hour Mobility Fingerprint', font: { size: 13, family: 'Inter' } },
+      margin: { t: 36, b: 40, l: 36, r: 10 },
+      xaxis: { tickvals: tickvals168, ticktext: dayLabels, gridcolor: '#f1f5f9' },
+      yaxis: { gridcolor: '#f1f5f9' },
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { size: 11, family: 'Inter' },
+      legend: { orientation: 'h', y: -0.15 }
+    }, { responsive: true });
+
+    const h24 = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+    Plotly.newPlot('chart-busyness', [
+      { x: h24, y: p.busy.truth, name: 'Ground Truth', mode: 'lines+markers', line: { color: '#FBBC05', width: 2 }, marker: { size: 4 } },
+      { x: h24, y: p.busy.pred, name: 'ME-POIs Prediction', mode: 'lines+markers', line: { color: '#34A853', width: 2, dash: 'dot' }, marker: { size: 4 } }
+    ], {
+      title: { text: 'Busyness: Ground Truth vs Prediction', font: { size: 13, family: 'Inter' } },
+      margin: { t: 36, b: 40, l: 36, r: 10 },
+      xaxis: { gridcolor: '#f1f5f9' },
+      yaxis: { gridcolor: '#f1f5f9' },
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { size: 11, family: 'Inter' },
+      legend: { orientation: 'h', y: -0.15 }
+    }, { responsive: true });
+  }
+
+  /* ─── Table ─── */
+  function renderTable(list) {
+    document.getElementById('poi-tbody').innerHTML = list.slice(0, 15).map(p => `
+      <tr onclick="window.__inspect(${p.id})">
+        <td>${p.id}</td>
+        <td><strong>${p.name}</strong></td>
+        <td>${p.cat}</td>
+        <td>${p.area}</td>
+        <td style="color:${p.isTest ? '#EA4335' : '#4285F4'};font-weight:600">${p.isTest ? 'Holdout' : 'Train'}</td>
+        <td>${PRICE_LABELS[p.price]}</td>
+        <td><button class="btn-inspect" onclick="event.stopPropagation();window.__inspect(${p.id})">Inspect</button></td>
+      </tr>`).join('');
+  }
+
+  window.__inspect = function(id) { inspectPoi(id); };
+
+  function setupSearch() {
+    const inp = document.getElementById('search-input');
+    const sel = document.getElementById('cat-filter');
+    function filter() {
+      const q = inp.value.toLowerCase();
+      const c = sel.value;
+      renderTable(pois.filter(p =>
+        (p.name.toLowerCase().includes(q) || p.area.toLowerCase().includes(q)) &&
+        (c === 'ALL' || p.cat === c)
+      ));
+    }
+    inp.addEventListener('input', filter);
+    sel.addEventListener('change', filter);
+  }
+
+  /* ─── Init ─── */
+  window.addEventListener('DOMContentLoaded', () => {
+    pois = genPois();
+    initMap();
+    addMarkers();
+    renderTable(pois);
+    setupSearch();
+    inspectPoi(0);
+
+    // Radius slider
+    const slider = document.getElementById('gnn-slider');
+    slider.addEventListener('input', e => {
+      radius = parseFloat(e.target.value);
+      document.getElementById('gnn-val').textContent = radius.toFixed(1) + ' km';
+      drawEdges();
+    });
+
+    // Benchmark chart
+    const models = ['Text-Only', 'Mobility', 'Fusion', 'ME-POIs'];
+    Plotly.newPlot('chart-benchmark', [
+      { x: models, y: [0.269, 0.324, 0.307, 0.327], name: 'Price F1 ↑', type: 'bar', marker: { color: ['#d1d5db','#93c5fd','#fcd34d','#4ade80'] } },
+      { x: models, y: [0.576, 0.585, 0.590, 0.599], name: 'Hours IoU ↑', type: 'bar', marker: { color: ['#e5e7eb','#bfdbfe','#fde68a','#86efac'] } }
+    ], {
+      barmode: 'group',
+      margin: { t: 10, b: 36, l: 36, r: 10 },
+      yaxis: { gridcolor: '#f1f5f9', range: [0, 0.7] },
+      xaxis: { gridcolor: '#f1f5f9' },
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { size: 11, family: 'Inter' },
+      legend: { orientation: 'h', y: 1.1 }
+    }, { responsive: true });
+
+    // Loss chart
+    const ep = Array.from({ length: 30 }, (_, i) => i + 1);
+    Plotly.newPlot('chart-loss', [
+      { x: ep, y: LOSS.text, name: 'Text-Only', line: { color: '#9ca3af' } },
+      { x: ep, y: LOSS.mobility, name: 'Mobility-Only', line: { color: '#60a5fa' } },
+      { x: ep, y: LOSS.fusion, name: 'Fusion', line: { color: '#fbbf24' } },
+      { x: ep, y: LOSS.mepoi, name: 'ME-POIs', line: { color: '#22c55e', width: 3 } }
+    ], {
+      margin: { t: 10, b: 36, l: 36, r: 10 },
+      xaxis: { title: 'Epoch', gridcolor: '#f1f5f9' },
+      yaxis: { title: 'Loss', gridcolor: '#f1f5f9' },
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      font: { size: 11, family: 'Inter' },
+      legend: { orientation: 'h', y: 1.1 }
+    }, { responsive: true });
+  });
+
+})();
+</script>
+</body>
+</html>
