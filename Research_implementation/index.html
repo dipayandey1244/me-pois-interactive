@@ -14,6 +14,12 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 
+  <!-- KaTeX Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+
   <style>
     /* ======= RESET & BASE ======= */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1437,8 +1443,9 @@
         <li><strong>Mobility Normalization:</strong> 168-hour × 4-channel tensors (arrivals, departures, dwell time, density) are z-score normalized per venue.</li>
         <li><strong>Graph Construction:</strong> Pairwise Haversine distance matrix is computed between all venue coordinates.</li>
         <li><strong>Multi-Task Loss Optimization:</strong> The model optimizes 5 loss heads simultaneously:<br>
-          <div class="math-display" style="margin:10px 0; font-size:0.82rem;">
-            $$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{hours}} + 2.0\,\mathcal{L}_{\text{price}} + 3.0\,\mathcal{L}_{\text{closure}} + 0.01\,\mathcal{L}_{\text{intent}} + 1.0\,\mathcal{L}_{\text{busyness}}$$
+          <div class="math-display" style="margin:12px 0; padding:16px; font-size:0.88rem; text-align:center; line-height:2.0;">
+            $$\mathcal{L}_{\text{total}} = \lambda_1 \mathcal{L}_{\text{hours}} + \lambda_2 \mathcal{L}_{\text{price}} + \lambda_3 \mathcal{L}_{\text{closure}} + \lambda_4 \mathcal{L}_{\text{intent}} + \lambda_5 \mathcal{L}_{\text{busyness}}$$
+            $$\mathcal{L}_{\text{total}} = 1.0 \cdot \ell_{\text{BCE}}(\hat{\mathbf{y}}_{\text{hrs}}, \mathbf{y}_{\text{hrs}}) + 2.0 \cdot \ell_{\text{CE}}(\hat{\mathbf{y}}_{\text{price}}, \mathbf{y}_{\text{price}}) + 3.0 \cdot \ell_{\text{BCE}}(\hat{y}_{\text{close}}, y_{\text{close}}) + 0.01 \cdot \ell_{\text{Huber}}(\hat{y}_{\text{intent}}, y_{\text{intent}}) + 1.0 \cdot \ell_{\text{Huber}}(\hat{\mathbf{y}}_{\text{busy}}, \mathbf{y}_{\text{busy}})$$
           </div>
         </li>
         <li><strong>Holdout Evaluation:</strong> The model is evaluated on held-out venues in San Francisco that were never seen during training.</li>
