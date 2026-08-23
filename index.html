@@ -296,23 +296,95 @@
       color: #334155;
     }
 
-    /* ======= CODE ======= */
-    .code-block {
-      background: #1e293b;
+    /* ======= TERMINAL CODE WINDOW ======= */
+    .terminal-window {
+      background: #0d1117;
       border-radius: 10px;
-      padding: 20px 24px;
-      margin: 20px 0;
+      border: 1px solid #30363d;
+      margin: 24px 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    .terminal-header {
+      background: #161b22;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #21262d;
+    }
+    .terminal-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .terminal-dots {
+      display: flex;
+      gap: 6px;
+    }
+    .terminal-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .terminal-dot.red { background: #ff5f56; border: 1px solid #e0443e; }
+    .terminal-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
+    .terminal-dot.green { background: #27c93f; border: 1px solid #1aab29; }
+    .terminal-title {
       font-family: 'Roboto Mono', monospace;
       font-size: 0.78rem;
-      color: #e2e8f0;
-      overflow-x: auto;
-      line-height: 1.7;
+      color: #8b949e;
+      font-weight: 500;
+      margin-left: 6px;
     }
-    .code-block .kw { color: #f472b6; }
-    .code-block .cl { color: #38bdf8; }
-    .code-block .fn { color: #4ade80; }
-    .code-block .cm { color: #64748b; font-style: italic; }
-    .code-block .st { color: #fbbf24; }
+    .terminal-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .terminal-lang {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #58a6ff;
+      background: rgba(56, 139, 253, 0.15);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 139, 253, 0.3);
+    }
+    .copy-btn {
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: #30363d;
+      color: #fff;
+    }
+    .terminal-body {
+      padding: 20px 24px;
+      overflow-x: auto;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: #c9d1d9;
+      margin: 0;
+      background: #0d1117;
+    }
+    .terminal-body .kw { color: #ff7b72; font-weight: 600; }
+    .terminal-body .cl { color: #79c0ff; font-weight: 600; }
+    .terminal-body .fn { color: #d2a8ff; font-weight: 600; }
+    .terminal-body .cm { color: #8b949e; font-style: italic; }
+    .terminal-body .st { color: #a5d6ff; }
+    .terminal-body .num { color: #79c0ff; }
 
     /* ======= PROOF COMPARISON ======= */
     .vs-grid {
@@ -753,7 +825,23 @@
     <h3>🧠 Brain 2 — TemporalMobilityEncoder</h3>
     <p>This module reads the 168-hour weekly mobility signal (4 channels: arrivals, departures, dwell time, density) and compresses it into a single 128-number "fingerprint" that captures the venue's temporal behavior.</p>
 
-    <div class="code-block"><span class="cm">## ───────────────────────────────────────────────────────────────</span>
+    <!-- ── TEMPORAL ENCODER CODE TERMINAL ── -->
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="terminal-left">
+          <div class="terminal-dots">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+          </div>
+          <span class="terminal-title">me_pois/models/temporal_mobility.py</span>
+        </div>
+        <div class="terminal-right">
+          <span class="terminal-lang">PyTorch 2.1</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+      </div>
+      <pre class="terminal-body"><code><span class="cm">## ───────────────────────────────────────────────────────────────</span>
 <span class="cm">##  TemporalMobilityEncoder</span>
 <span class="cm">##  Input:  168 hours × 4 channels  (one week of foot traffic)</span>
 <span class="cm">##  Output: 128 numbers             (the venue's "mobility fingerprint")</span>
@@ -761,7 +849,7 @@
 
 <span class="kw">class</span> <span class="cl">TemporalMobilityEncoder</span>(nn.Module):
 
-    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_ch=<span class="st">4</span>, seq_len=<span class="st">168</span>, d_model=<span class="st">128</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_ch=<span class="num">4</span>, seq_len=<span class="num">168</span>, d_model=<span class="num">128</span>):
         <span class="cm"># in_ch=4    → 4 input channels: arrivals, departures, dwell, density</span>
         <span class="cm"># seq_len=168 → 24 hours × 7 days = 168 time steps per week</span>
         <span class="cm"># d_model=128 → internal representation size (how many numbers per time step)</span>
@@ -775,8 +863,8 @@
         self.conv = nn.Conv1d(
             in_channels=in_ch,       <span class="cm"># 4 raw signals go in</span>
             out_channels=d_model,    <span class="cm"># 128 learned features come out</span>
-            kernel_size=<span class="st">3</span>,           <span class="cm"># look at 3 consecutive hours at a time</span>
-            padding=<span class="st">1</span>               <span class="cm"># keep the output length = 168 (same as input)</span>
+            kernel_size=<span class="num">3</span>,           <span class="cm"># look at 3 consecutive hours at a time</span>
+            padding=<span class="num">1</span>               <span class="cm"># keep the output length = 168 (same as input)</span>
         )
 
         <span class="cm"># ┌─ STEP 2: Positional Embedding ───────────────────────────┐</span>
@@ -786,7 +874,7 @@
         <span class="cm"># │ Friday 8am. Initialized with small random noise.          │</span>
         <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
         self.pos = nn.Parameter(
-            torch.randn(<span class="st">1</span>, seq_len, d_model) * <span class="st">0.02</span>
+            torch.randn(<span class="num">1</span>, seq_len, d_model) * <span class="num">0.02</span>
             <span class="cm"># Shape: (1, 168, 128) — one positional vector per hour</span>
             <span class="cm"># Multiplied by 0.02 so initial values are small and don't dominate</span>
         )
@@ -800,12 +888,12 @@
         <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
         layer = nn.TransformerEncoderLayer(
             d_model=d_model,         <span class="cm"># each time step = 128 numbers</span>
-            nhead=<span class="st">4</span>,                 <span class="cm"># 4 attention heads (128/4 = 32 dims each)</span>
+            nhead=<span class="num">4</span>,                 <span class="cm"># 4 attention heads (128/4 = 32 dims each)</span>
             batch_first=<span class="cl">True</span>        <span class="cm"># input shape: (batch, 168, 128)</span>
         )
         self.transformer = nn.TransformerEncoder(
             layer,
-            num_layers=<span class="st">2</span>            <span class="cm"># stack 2 layers for deeper pattern recognition</span>
+            num_layers=<span class="num">2</span>            <span class="cm"># stack 2 layers for deeper pattern recognition</span>
         )
 
         <span class="cm"># ┌─ STEP 4: Output Projection ──────────────────────────────┐</span>
@@ -813,7 +901,7 @@
         <span class="cm"># │ (In this case d_model is already 128, so this acts as a   │</span>
         <span class="cm"># │ learned mixing layer to refine the final representation.) │</span>
         <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
-        self.out = nn.Linear(d_model, <span class="st">128</span>)
+        self.out = nn.Linear(d_model, <span class="num">128</span>)
 
 
     <span class="kw">def</span> <span class="fn">forward</span>(self, x):
@@ -825,7 +913,7 @@
         <span class="cm">#   Then transpose so time is the sequence dimension:</span>
         <span class="cm">#   (batch, 128, 168) → transpose → (batch, 168, 128)</span>
         <span class="cm">#   Then add positional embeddings so the model knows the hour</span>
-        x = torch.relu(self.conv(x)).transpose(<span class="st">1</span>, <span class="st">2</span>) + self.pos
+        x = torch.relu(self.conv(x)).transpose(<span class="num">1</span>, <span class="num">2</span>) + self.pos
 
         <span class="cm"># Step B: Transformer processes all 168 hours with self-attention</span>
         <span class="cm">#   (batch, 168, 128) → Transformer → (batch, 168, 128)</span>
@@ -836,7 +924,8 @@
         <span class="cm">#</span>
         <span class="cm"># Step D: Project through output layer + ReLU activation</span>
         <span class="cm">#   (batch, 128) → Linear → (batch, 128) → ReLU → final output</span>
-        <span class="kw">return</span> torch.relu(self.out(self.transformer(x).mean(dim=<span class="st">1</span>)))</div>
+        <span class="kw">return</span> torch.relu(self.out(self.transformer(x).mean(dim=<span class="num">1</span>)))</code></pre>
+    </div>
 
     <div class="simple-box">
       <div class="heading">What just happened?</div>
@@ -852,7 +941,23 @@
     <h3>🧠 Brain 3 — MultiScaleSpatialGNN</h3>
     <p>This module builds a geographic graph of nearby venues and aggregates information from neighbors at two distance scales (local + neighborhood), producing a spatially-aware representation.</p>
 
-    <div class="code-block"><span class="cm">## ───────────────────────────────────────────────────────────────</span>
+    <!-- ── SPATIAL GNN CODE TERMINAL ── -->
+    <div class="terminal-window">
+      <div class="terminal-header">
+        <div class="terminal-left">
+          <div class="terminal-dots">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+          </div>
+          <span class="terminal-title">me_pois/models/multi_scale_gnn.py</span>
+        </div>
+        <div class="terminal-right">
+          <span class="terminal-lang">PyTorch 2.1</span>
+          <button class="copy-btn" onclick="copyCode(this)">📋 Copy Code</button>
+        </div>
+      </div>
+      <pre class="terminal-body"><code><span class="cm">## ───────────────────────────────────────────────────────────────</span>
 <span class="cm">##  MultiScaleSpatialGNN (Graph Neural Network)</span>
 <span class="cm">##  Input:  feature vectors for all venues + pairwise distance matrix</span>
 <span class="cm">##  Output: spatially-enriched feature vectors</span>
@@ -860,7 +965,7 @@
 
 <span class="kw">class</span> <span class="cl">MultiScaleSpatialGNN</span>(nn.Module):
 
-    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim=<span class="st">256</span>):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim=<span class="num">256</span>):
         <span class="cm"># dim = size of each venue's feature vector (256 numbers)</span>
         <span class="cl">super</span>().__init__()
 
@@ -885,7 +990,7 @@
         <span class="cm"># │   3. Aggregated NEIGHBORHOOD features (dim)              │</span>
         <span class="cm"># │ Total input: dim × 3 = 768 → output: dim = 256           │</span>
         <span class="cm"># └──────────────────────────────────────────────────────────┘</span>
-        self.fuse = nn.Linear(dim * <span class="st">3</span>, dim)
+        self.fuse = nn.Linear(dim * <span class="num">3</span>, dim)
 
 
     <span class="kw">def</span> <span class="fn">forward</span>(self, x, dist_matrix):
@@ -894,12 +999,12 @@
 
         <span class="cm"># ── Scale 1: LOCAL neighbors (within 0.5 km) ──────────────</span>
         <span class="cm"># Create adjacency matrix: 1 if distance ≤ 0.5km, else 0</span>
-        adj_local = (dist_matrix <= <span class="st">0.5</span>).float()
+        adj_local = (dist_matrix <= <span class="num">0.5</span>).float()
         <span class="cm">#   Example: if venues A and B are 0.3km apart → adj[A][B] = 1</span>
         <span class="cm">#            if venues A and C are 1.2km apart → adj[A][C] = 0</span>
 
         <span class="cm"># Count how many local neighbors each venue has (for averaging)</span>
-        deg = adj_local.sum(<span class="st">1</span>, keepdim=<span class="cl">True</span>) + <span class="st">1e-6</span>
+        deg = adj_local.sum(<span class="num">1</span>, keepdim=<span class="cl">True</span>) + <span class="num">1e-6</span>
         <span class="cm">#   +1e-6 prevents division by zero if a venue has no neighbors</span>
 
         <span class="cm"># THE KEY OPERATION: aggregate neighbor features</span>
@@ -911,15 +1016,16 @@
 
         <span class="cm"># ── Scale 2: NEIGHBORHOOD (0.5km to 2.0km) ────────────────</span>
         <span class="cm"># Same process, but for the "medium distance" ring</span>
-        adj_neigh = ((dist_matrix > <span class="st">0.5</span>) & (dist_matrix <= <span class="st">2.0</span>)).float()
-        deg2 = adj_neigh.sum(<span class="st">1</span>, keepdim=<span class="cl">True</span>) + <span class="st">1e-6</span>
+        adj_neigh = ((dist_matrix > <span class="num">0.5</span>) & (dist_matrix <= <span class="num">2.0</span>)).float()
+        deg2 = adj_neigh.sum(<span class="num">1</span>, keepdim=<span class="cl">True</span>) + <span class="num">1e-6</span>
         h_neigh = torch.relu(self.neigh_proj(adj_neigh @ x / deg2))
 
         <span class="cm"># ── FUSION: combine self + local + neighborhood ───────────</span>
         <span class="cm"># torch.cat stacks three 256-d vectors → one 768-d vector</span>
         <span class="cm"># self.fuse projects 768 → 256 (learned mixing)</span>
         <span class="cm"># Result: each venue now "knows" about itself AND its surroundings</span>
-        <span class="kw">return</span> torch.relu(self.fuse(torch.cat([x, h_local, h_neigh], dim=-<span class="st">1</span>)))</div>
+        <span class="kw">return</span> torch.relu(self.fuse(torch.cat([x, h_local, h_neigh], dim=-<span class="num">1</span>)))</code></pre>
+    </div>
 
     <div class="simple-box">
       <div class="heading">What just happened?</div>
@@ -1338,6 +1444,22 @@
 <!-- JAVASCRIPT                                          -->
 <!-- ═══════════════════════════════════════════════════ -->
 <script>
+window.copyCode = function(btn) {
+  const win = btn.closest('.terminal-window');
+  const code = win.querySelector('.terminal-body').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ Copied!';
+    btn.style.background = '#2ea043';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 2000);
+  });
+};
+
 (function() {
   'use strict';
 
