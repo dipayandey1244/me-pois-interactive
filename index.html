@@ -34,7 +34,7 @@
     /* ======= HEADER ======= */
     .site-header {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      padding: 14px 0;
+      padding: 12px 0;
       position: sticky;
       top: 0;
       z-index: 100;
@@ -44,23 +44,37 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: nowrap;
+      gap: 20px;
     }
     .logo {
       font-family: 'Inter', sans-serif;
-      color: #fff;
       font-weight: 800;
-      font-size: 0.95rem;
+      font-size: 1.05rem;
       letter-spacing: -0.02em;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .logo span { opacity: 0.5; font-weight: 400; }
+    .logo a {
+      color: #fff;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .logo a:hover { opacity: 0.85; }
+    .site-header nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      white-space: nowrap;
+    }
     .site-header nav a {
-      color: rgba(255,255,255,0.65);
+      color: rgba(255,255,255,0.7);
       text-decoration: none;
       font-family: 'Inter', sans-serif;
       font-size: 0.82rem;
-      font-weight: 500;
-      margin-left: 24px;
+      font-weight: 600;
       transition: color 0.2s;
+      white-space: nowrap;
     }
     .site-header nav a:hover { color: #fff; }
 
@@ -604,7 +618,7 @@
 <!-- ===== HEADER ===== -->
 <header class="site-header">
   <div class="wide">
-    <div class="logo">ME-POIs <span>· Interactive Walkthrough of <a href="https://research.google/blog/how-mobility-gives-language-models-a-deeper-understanding-of-place/" target="_blank" style="color:#4285F4; text-decoration:none;">Google Research</a></span></div>
+    <div class="logo"><a href="https://research.google/blog/how-mobility-gives-language-models-a-deeper-understanding-of-place/" target="_blank">Research Work</a></div>
     <nav>
       <a href="#step1">The Problem</a>
       <a href="#step2">The Idea</a>
