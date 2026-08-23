@@ -1306,6 +1306,22 @@
       <p><strong>How it works:</strong> When you click "Run Classification", we query the <a href="https://overpass-api.de/" target="_blank" style="color:#4285F4;">Overpass API</a> (OpenStreetMap's public query endpoint) to fetch restaurants, cafés, bars, offices, and shops in your chosen city. We then simulate ME-POIs predictions (price level, closure risk, busyness) on each real venue using the model patterns learned from Section 5.</p>
     </div>
 
+    <!-- ── HOW PREDICTIONS WORK EXPLAINER BOX ── -->
+    <div class="simple-box">
+      <div class="heading">🧪 How Synthetic Datasets & Predictions Work</div>
+      <p>
+        <strong>1. How the Synthetic Dataset Was Generated:</strong><br>
+        • <strong>168-Hour Foot Traffic:</strong> Generated using daily Gaussian bell curves centered around realistic category peak hours (e.g. 8:00 AM for cafés, 12:00 PM for lunch, 10:00 PM for bars) plus Poisson noise ($\lambda=5$).<br>
+        • <strong>4 Mobility Channels:</strong> Tracks <em>Arrivals</em> (new visitors), <em>Departures</em> ($0.85 \times \text{arrivals} + \text{noise}$), <em>Dwell Time</em> (minutes spent), and <em>Density</em> ($\text{arrivals} \times \text{dwell}/60$).<br>
+        • <strong>Spatial Distances:</strong> Computed using the <em>Haversine formula</em> between all pairs of coordinates to form the GNN adjacency graph ($d \le 0.5\text{km}$ local, $0.5\text{km} < d \le 2.0\text{km}$ neighborhood).<br><br>
+
+        <strong>2. How Each Attribute Is Predicted:</strong><br>
+        • 💰 <strong>Predicted Price ($ to $$$$):</strong> CrossEntropy classification head ($\mathbf{W}_{\text{price}} \cdot h_{\text{fused}} + b$). Longer dwell times (≥90 min) + late evening arrivals + luxury neighbor context predict tier $$$/$$$$, while short dwell times (15–30 min) predict $/$$$.<br>
+        • ⚠️ <strong>Closure Risk (0% – 100%):</strong> Sigmoid probability head ($\sigma(\mathbf{W}_{\text{closure}} \cdot h_{\text{fused}} + b)$). Venues with declining foot traffic, low overall visitor density, or generic/unnamed tags get assigned high closure risk.<br>
+        • ⏰ <strong>Peak Hour (0:00 – 23:00):</strong> Extracted from the 168-hour temporal prediction head by taking $\text{argmax}_{h \in 0..23}(\text{Density}_h)$ across the weekly circadian rhythm profile.
+      </p>
+    </div>
+
     <!-- City Input -->
     <div style="display:flex; gap:12px; margin:24px 0; flex-wrap:wrap; align-items:center;">
       <select id="city-preset" style="font-family:'Inter',sans-serif; font-size:0.9rem; padding:10px 14px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; min-width:200px;">
